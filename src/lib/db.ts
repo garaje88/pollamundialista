@@ -11,6 +11,7 @@ import {
   orderBy,
   limit,
   updateDoc,
+  increment,
   serverTimestamp,
 } from './firebase';
 
@@ -243,6 +244,39 @@ export async function setMatchStatus(
 export async function recalculateGroupStandings(group: string, teamNames: string[]): Promise<void> {
   const matches = await getMatchesByGroup(group);
   await saveGroupStandings(group, computeStandings(teamNames, matches));
+}
+
+// ──────────────────────────────────────────────
+// Scoring — run after admin saves a match result
+// ──────────────────────────────────────────────
+export async function scorePredictionsForMatch(
+  matchId: string,
+  homeScore: number,
+  awayScore: number
+): Promise<{ scored: number; skipped: number }> {
+  const allPreds = await getAllPredictionsForMatch(matchId);
+  const pending = allPreds.filter(p => p.status === 'pending');
+
+  for (const pred of pending) {
+    const { points, type } = calculatePoints(pred.homeGoals, pred.awayGoals, homeScore, awayScore);
+
+    await updateDoc(doc(db, 'predictions', pred.id!), {
+      points,
+      status: 'scored',
+      updatedAt: serverTimestamp(),
+    });
+
+    const userUpdate: Record<string, any> = {
+      totalPoints: increment(points),
+      totalPredictions: increment(1),
+    };
+    if (type === 'exact')  userUpdate.exactResults   = increment(1);
+    if (type === 'winner') userUpdate.correctWinners = increment(1);
+
+    await updateDoc(doc(db, 'users', pred.userId), userUpdate);
+  }
+
+  return { scored: pending.length, skipped: allPreds.length - pending.length };
 }
 
 // ──────────────────────────────────────────────

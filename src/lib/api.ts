@@ -114,16 +114,33 @@ export function groupByRound(matches: Match[]): Record<string, Match[]> {
   }, {} as Record<string, Match[]>);
 }
 
-// ── Format date to Spanish locale ─────────────
-export function formatMatchDate(dateStr: string, timeStr?: string): string {
+// ── Format date to Spanish locale (America/Bogota, UTC-5) ─────────────
+export function formatMatchDate(utcIso: string): string {
   try {
-    const d = new Date(`${dateStr}T${timeStr || '00:00'}:00Z`);
-    return d.toLocaleDateString('es-CO', {
-      weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit'
+    return new Date(utcIso).toLocaleDateString('es-CO', {
+      timeZone: 'America/Bogota',
+      weekday: 'short', day: 'numeric', month: 'short',
+      hour: '2-digit', minute: '2-digit',
     });
-  } catch {
-    return dateStr;
-  }
+  } catch { return utcIso; }
+}
+
+export function formatMatchTime(utcIso: string): string {
+  try {
+    return new Date(utcIso).toLocaleTimeString('es-CO', {
+      timeZone: 'America/Bogota',
+      hour: '2-digit', minute: '2-digit',
+    });
+  } catch { return utcIso; }
+}
+
+export function formatMatchDay(utcIso: string): string {
+  try {
+    return new Date(utcIso).toLocaleDateString('es-CO', {
+      timeZone: 'America/Bogota',
+      weekday: 'short', day: 'numeric', month: 'short',
+    });
+  } catch { return utcIso; }
 }
 
 // ── World Cup 2026 groups (draw oficial dic 2024) ──

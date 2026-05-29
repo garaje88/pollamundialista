@@ -51,7 +51,7 @@ const groupLetters = ['A','B','C','D','E','F','G','H','I','J','K','L'];
 
 <script>
   import { auth, onAuthStateChanged, db, collection, query, orderBy, getDocs } from '../lib/firebase';
-  import { updateMatchScore, recalculateGroupStandings } from '../lib/db';
+  import { updateMatchScore, recalculateGroupStandings, scorePredictionsForMatch } from '../lib/db';
 
   const ADMIN_EMAILS = [import.meta.env.PUBLIC_ADMIN_EMAIL].filter(Boolean);
 
@@ -195,26 +195,58 @@ const groupLetters = ['A','B','C','D','E','F','G','H','I','J','K','L'];
     }
     btn.disabled = true;
     btn.textContent = 'Guardando...';
+
+    // ── Paso 1: guardar marcador (crítico) ──────────────────
     try {
       await updateMatchScore(matchId, hVal, aVal);
-      await recalculateGroupStandings(group, WC_GROUPS[group]);
-      allMatches = allMatches.map((m: any) =>
-        m.id === matchId ? { ...m, homeScore: hVal, awayScore: aVal, status: 'finished' } : m
-      );
-      showStatus(`Resultado guardado y tabla Grupo ${group} actualizada.`, true);
-      renderGroup(group);
     } catch (e: any) {
       console.error(e);
       const isPermDenied = e?.code === 'permission-denied';
       showStatus(
         isPermDenied
-          ? 'Sin permisos. Despliega las reglas de Firestore: firebase deploy --only firestore:rules'
-          : `Error: ${e?.message ?? 'desconocido'}`,
+          ? 'Sin permisos. Ejecuta: firebase deploy --only firestore:rules'
+          : `Error al guardar: ${e?.message ?? 'desconocido'}`,
         false
       );
       btn.disabled = false;
       btn.textContent = 'Guardar resultado';
+      return;
     }
+
+    // Marcador guardado — actualizar estado local y UI
+    allMatches = allMatches.map((m: any) =>
+      m.id === matchId ? { ...m, homeScore: hVal, awayScore: aVal, status: 'finished' } : m
+    );
+    renderGroup(group);
+
+    // ── Paso 2a: recalcular tabla (best-effort) ─────────────
+    let standingsOk = false;
+    try {
+      await recalculateGroupStandings(group, WC_GROUPS[group]);
+      standingsOk = true;
+    } catch (e: any) {
+      console.error('Error recalculando tabla:', e?.code, e?.message);
+    }
+
+    // ── Paso 2b: puntuar predicciones (best-effort) ──────────
+    let scoringMsg = '';
+    try {
+      const scoring = await scorePredictionsForMatch(matchId, hVal, aVal);
+      scoringMsg = `${scoring.scored} predicciones puntuadas.`;
+    } catch (e: any) {
+      console.error('Error puntuando predicciones:', e?.code, e?.message);
+      scoringMsg = e?.code === 'permission-denied'
+        ? '⚠ Predicciones sin puntuar — ejecuta: firebase deploy --only firestore:rules'
+        : `⚠ Error al puntuar: ${e?.message ?? 'desconocido'}`;
+    }
+
+    showStatus(
+      `Resultado guardado. ${standingsOk ? `Tabla Grupo ${group} actualizada.` : '⚠ Tabla no actualizada.'} ${scoringMsg}`,
+      true
+    );
+
+    btn.disabled = false;
+    btn.textContent = 'Actualizar';
   }
 
   async function recalcGroup(group: string) {

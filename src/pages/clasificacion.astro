@@ -65,6 +65,10 @@ import Layout from '../layouts/Layout.astro';
   import { auth, onAuthStateChanged } from '../lib/firebase';
   import { getLeaderboard } from '../lib/db';
 
+  function esc(s: string): string {
+    return s.replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c] ?? c));
+  }
+
   async function loadLeaderboard() {
     const rows = await getLeaderboard(30);
     document.getElementById('loading-board')!.style.display = 'none';
@@ -93,9 +97,9 @@ import Layout from '../layouts/Layout.astro';
         </div>
         <div style="display:flex;align-items:center;gap:0.75rem;">
           <div style="width:2.2rem;height:2.2rem;border-radius:50%;background:${isTop ? rankColors[rank-1] : 'var(--color-primary)'};color:${rank === 1 ? 'var(--color-primary)' : '#fff'};display:flex;align-items:center;justify-content:center;font-family:var(--font-display);font-weight:700;font-size:0.85rem;flex-shrink:0;">
-            ${initial}
+            ${esc(initial)}
           </div>
-          <span style="font-weight:600;color:var(--color-text);font-size:0.95rem;">${entry.displayName}</span>
+          <span style="font-weight:600;color:var(--color-text);font-size:0.95rem;">${esc(entry.displayName)}</span>
         </div>
         <div style="text-align:right;font-family:var(--font-display);font-weight:700;font-size:0.9rem;color:var(--color-green);">${entry.exactResults}</div>
         <div style="text-align:right;font-family:var(--font-display);font-weight:700;font-size:0.9rem;color:var(--color-text-2);">${entry.correctWinners}</div>

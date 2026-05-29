@@ -1,10 +1,15 @@
 rules_version = '2';
+// v2 — seguridad reforzada: whitelist de campos, validación de tipos, prevención de inyección de puntos
 service cloud.firestore {
   match /databases/{database}/documents {
 
     function isAdmin() {
       return request.auth != null &&
-             request.auth.token.email in ['cpolanco@saludtools.com'];
+             request.auth.token.email == 'cpolanco@saludtools.com';
+    }
+
+    function isOwner(userId) {
+      return request.auth != null && request.auth.uid == userId;
     }
 
     // Partidos: lectura pública, escritura solo admin
@@ -19,34 +24,74 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
-    // Usuarios: lectura pública (para tabla de posiciones),
-    // escritura solo del propio perfil autenticado
+    // Usuarios
     match /users/{userId} {
       allow read: if true;
-      allow create: if request.auth != null && request.auth.uid == userId;
-      allow update: if request.auth != null && request.auth.uid == userId;
+      allow create: if isOwner(userId)
+        && request.resource.data.keys().hasOnly(['uid','displayName','email','photoURL','totalPoints','totalPredictions','exactResults','correctWinners','createdAt'])
+        && request.resource.data.totalPoints == 0
+        && request.resource.data.totalPredictions == 0
+        && request.resource.data.exactResults == 0
+        && request.resource.data.correctWinners == 0;
+      // El dueño solo puede actualizar displayName y photoURL
+      // Los campos de puntos solo los actualiza admin (al puntuar predicciones)
+      allow update: if isAdmin()
+        || (isOwner(userId)
+          && request.resource.data.diff(resource.data).affectedKeys()
+               .hasOnly(['displayName', 'photoURL']));
       allow delete: if false;
     }
 
-    // Predicciones: el ID es "{uid}_{matchId}"
-    // Solo el dueño puede leer y escribir sus predicciones.
-    // La regla de read usa resource.data.userId (no el ID del documento)
-    // para que las consultas de colección con where('userId','==',uid) funcionen.
+    // Predicciones
     match /predictions/{predictionId} {
       allow read: if request.auth != null
-        && resource.data.userId == request.auth.uid;
-      // create: solo cuando el partido sigue en estado 'scheduled'
+        && (resource.data.userId == request.auth.uid || isAdmin());
+
       allow create: if request.auth != null
+        // Solo el dueño puede crear su predicción
         && request.resource.data.userId == request.auth.uid
+        // El ID del documento debe ser {userId}_{matchId}
+        && predictionId == request.resource.data.userId + '_' + request.resource.data.matchId
+        // Solo campos permitidos — sin 'points' ni 'status:scored' desde el cliente
+        && request.resource.data.keys().hasOnly(['userId','matchId','homeGoals','awayGoals','status','createdAt','updatedAt'])
+        && request.resource.data.status == 'pending'
+        && !('points' in request.resource.data)
+        // Validar que los goles son enteros válidos
+        && request.resource.data.homeGoals is int
+        && request.resource.data.homeGoals >= 0
+        && request.resource.data.homeGoals <= 20
+        && request.resource.data.awayGoals is int
+        && request.resource.data.awayGoals >= 0
+        && request.resource.data.awayGoals <= 20
+        // Solo cuando el partido sigue programado
         && get(/databases/$(database)/documents/matches/$(request.resource.data.matchId)).data.status == 'scheduled';
 
-      // update: mismo dueño + partido aún no iniciado
-      allow update: if request.auth != null
-        && resource.data.userId == request.auth.uid
-        && request.resource.data.userId == request.auth.uid
-        && get(/databases/$(database)/documents/matches/$(resource.data.matchId)).data.status == 'scheduled';
+      allow update: if isAdmin()
+        // Admin puede actualizar para puntuar (puede cambiar points, status)
+        || (request.auth != null
+          && resource.data.userId == request.auth.uid
+          // El dueño no puede cambiar userId ni matchId
+          && request.resource.data.userId == resource.data.userId
+          && request.resource.data.matchId == resource.data.matchId
+          // No puede agregar 'points' ni cambiar a 'scored'
+          && !('points' in request.resource.data)
+          && request.resource.data.status == 'pending'
+          // Validar goles
+          && request.resource.data.homeGoals is int
+          && request.resource.data.homeGoals >= 0
+          && request.resource.data.homeGoals <= 20
+          && request.resource.data.awayGoals is int
+          && request.resource.data.awayGoals >= 0
+          && request.resource.data.awayGoals <= 20
+          // Solo mientras el partido esté programado
+          && get(/databases/$(database)/documents/matches/$(resource.data.matchId)).data.status == 'scheduled');
 
       allow delete: if false;
+    }
+
+    // Catch-all: denegar todo lo no especificado
+    match /{document=**} {
+      allow read, write: if false;
     }
   }
 }
