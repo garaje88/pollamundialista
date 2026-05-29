@@ -48,8 +48,8 @@ interface Match {
   country: string;
   group: string;
   round: string;
-  homeScore: null;
-  awayScore: null;
+  homeScore: null | number;
+  awayScore: null | number;
   status: 'scheduled';
 }
 
@@ -149,6 +149,46 @@ const matches: Match[] = [
   { id:'m070', matchNumber:70, homeTeam:'Panama',       awayTeam:'Croatia',       utcDateTime:'2026-06-23T23:00:00Z', venue:'BMO Field',               city:'Toronto',        country:'Canada',  group:'L', round:'Grupo L', homeScore:null, awayScore:null, status:'scheduled' },
   { id:'m071', matchNumber:71, homeTeam:'Panama',       awayTeam:'England',       utcDateTime:'2026-06-27T21:00:00Z', venue:'MetLife Stadium',         city:'East Rutherford',country:'USA',     group:'L', round:'Grupo L', homeScore:null, awayScore:null, status:'scheduled' },
   { id:'m072', matchNumber:72, homeTeam:'Croatia',      awayTeam:'Ghana',         utcDateTime:'2026-06-27T21:00:00Z', venue:'Lincoln Financial Field', city:'Philadelphia',   country:'USA',     group:'L', round:'Grupo L', homeScore:null, awayScore:null, status:'scheduled' },
+
+  // ── FASE ELIMINATORIA ────────────────────────────────────────────────
+  // Round of 32 — Mitad izquierda
+  { id:'m073', matchNumber:73,  homeTeam:'2A',      awayTeam:'2B',      utcDateTime:'2026-06-28T19:00:00Z', venue:'TBD', city:'TBD', country:'USA', group:'R32', round:'Dieciseisavos', homeScore:null, awayScore:null, status:'scheduled' },
+  { id:'m074', matchNumber:74,  homeTeam:'1E',      awayTeam:'3ABCDF',  utcDateTime:'2026-06-29T20:30:00Z', venue:'TBD', city:'TBD', country:'USA', group:'R32', round:'Dieciseisavos', homeScore:null, awayScore:null, status:'scheduled' },
+  { id:'m075', matchNumber:75,  homeTeam:'1F',      awayTeam:'2C',      utcDateTime:'2026-06-30T01:00:00Z', venue:'TBD', city:'TBD', country:'USA', group:'R32', round:'Dieciseisavos', homeScore:null, awayScore:null, status:'scheduled' },
+  { id:'m076', matchNumber:76,  homeTeam:'1G',      awayTeam:'3ABHIJ',  utcDateTime:'2026-06-30T21:00:00Z', venue:'TBD', city:'TBD', country:'USA', group:'R32', round:'Dieciseisavos', homeScore:null, awayScore:null, status:'scheduled' },
+  { id:'m077', matchNumber:77,  homeTeam:'1I',      awayTeam:'3CDFGH',  utcDateTime:'2026-07-01T00:00:00Z', venue:'TBD', city:'TBD', country:'USA', group:'R32', round:'Dieciseisavos', homeScore:null, awayScore:null, status:'scheduled' },
+  { id:'m078', matchNumber:78,  homeTeam:'1J',      awayTeam:'3EFGKL',  utcDateTime:'2026-07-01T19:00:00Z', venue:'TBD', city:'TBD', country:'USA', group:'R32', round:'Dieciseisavos', homeScore:null, awayScore:null, status:'scheduled' },
+  { id:'m079', matchNumber:79,  homeTeam:'2G',      awayTeam:'2H',      utcDateTime:'2026-07-02T01:00:00Z', venue:'TBD', city:'TBD', country:'USA', group:'R32', round:'Dieciseisavos', homeScore:null, awayScore:null, status:'scheduled' },
+  { id:'m080', matchNumber:80,  homeTeam:'2I',      awayTeam:'2J',      utcDateTime:'2026-07-02T23:00:00Z', venue:'TBD', city:'TBD', country:'USA', group:'R32', round:'Dieciseisavos', homeScore:null, awayScore:null, status:'scheduled' },
+  // Round of 32 — Mitad derecha
+  { id:'m081', matchNumber:81,  homeTeam:'1A',      awayTeam:'3BDEKL',  utcDateTime:'2026-06-28T23:00:00Z', venue:'TBD', city:'TBD', country:'USA', group:'R32', round:'Dieciseisavos', homeScore:null, awayScore:null, status:'scheduled' },
+  { id:'m082', matchNumber:82,  homeTeam:'2D',      awayTeam:'2E',      utcDateTime:'2026-06-29T01:00:00Z', venue:'TBD', city:'TBD', country:'USA', group:'R32', round:'Dieciseisavos', homeScore:null, awayScore:null, status:'scheduled' },
+  { id:'m083', matchNumber:83,  homeTeam:'2K',      awayTeam:'2L',      utcDateTime:'2026-06-29T23:00:00Z', venue:'TBD', city:'TBD', country:'USA', group:'R32', round:'Dieciseisavos', homeScore:null, awayScore:null, status:'scheduled' },
+  { id:'m084', matchNumber:84,  homeTeam:'1B',      awayTeam:'3ACDIJ',  utcDateTime:'2026-06-30T02:00:00Z', venue:'TBD', city:'TBD', country:'USA', group:'R32', round:'Dieciseisavos', homeScore:null, awayScore:null, status:'scheduled' },
+  { id:'m085', matchNumber:85,  homeTeam:'1H',      awayTeam:'3CDFL',   utcDateTime:'2026-07-01T20:00:00Z', venue:'TBD', city:'TBD', country:'USA', group:'R32', round:'Dieciseisavos', homeScore:null, awayScore:null, status:'scheduled' },
+  { id:'m086', matchNumber:86,  homeTeam:'2F',      awayTeam:'1D',      utcDateTime:'2026-07-02T00:00:00Z', venue:'TBD', city:'TBD', country:'USA', group:'R32', round:'Dieciseisavos', homeScore:null, awayScore:null, status:'scheduled' },
+  { id:'m087', matchNumber:87,  homeTeam:'1C',      awayTeam:'3AEGHK',  utcDateTime:'2026-07-03T00:00:00Z', venue:'TBD', city:'TBD', country:'USA', group:'R32', round:'Dieciseisavos', homeScore:null, awayScore:null, status:'scheduled' },
+  { id:'m088', matchNumber:88,  homeTeam:'2E',      awayTeam:'1L',      utcDateTime:'2026-07-03T23:00:00Z', venue:'TBD', city:'TBD', country:'USA', group:'R32', round:'Dieciseisavos', homeScore:null, awayScore:null, status:'scheduled' },
+  // Octavos de final
+  { id:'m089', matchNumber:89,  homeTeam:'W-M74',   awayTeam:'W-M77',   utcDateTime:'2026-07-04T21:00:00Z', venue:'TBD', city:'TBD', country:'USA', group:'R16', round:'Octavos',       homeScore:null, awayScore:null, status:'scheduled' },
+  { id:'m090', matchNumber:90,  homeTeam:'W-M73',   awayTeam:'W-M75',   utcDateTime:'2026-07-04T17:00:00Z', venue:'TBD', city:'TBD', country:'USA', group:'R16', round:'Octavos',       homeScore:null, awayScore:null, status:'scheduled' },
+  { id:'m091', matchNumber:91,  homeTeam:'W-M76',   awayTeam:'W-M79',   utcDateTime:'2026-07-05T21:00:00Z', venue:'TBD', city:'TBD', country:'USA', group:'R16', round:'Octavos',       homeScore:null, awayScore:null, status:'scheduled' },
+  { id:'m092', matchNumber:92,  homeTeam:'W-M78',   awayTeam:'W-M80',   utcDateTime:'2026-07-06T00:00:00Z', venue:'TBD', city:'TBD', country:'USA', group:'R16', round:'Octavos',       homeScore:null, awayScore:null, status:'scheduled' },
+  { id:'m093', matchNumber:93,  homeTeam:'W-M81',   awayTeam:'W-M84',   utcDateTime:'2026-07-05T17:00:00Z', venue:'TBD', city:'TBD', country:'USA', group:'R16', round:'Octavos',       homeScore:null, awayScore:null, status:'scheduled' },
+  { id:'m094', matchNumber:94,  homeTeam:'W-M82',   awayTeam:'W-M83',   utcDateTime:'2026-07-05T23:00:00Z', venue:'TBD', city:'TBD', country:'USA', group:'R16', round:'Octavos',       homeScore:null, awayScore:null, status:'scheduled' },
+  { id:'m095', matchNumber:95,  homeTeam:'W-M85',   awayTeam:'W-M88',   utcDateTime:'2026-07-06T21:00:00Z', venue:'TBD', city:'TBD', country:'USA', group:'R16', round:'Octavos',       homeScore:null, awayScore:null, status:'scheduled' },
+  { id:'m096', matchNumber:96,  homeTeam:'W-M86',   awayTeam:'W-M87',   utcDateTime:'2026-07-07T17:00:00Z', venue:'TBD', city:'TBD', country:'USA', group:'R16', round:'Octavos',       homeScore:null, awayScore:null, status:'scheduled' },
+  // Cuartos de final
+  { id:'m097', matchNumber:97,  homeTeam:'W-M89',   awayTeam:'W-M90',   utcDateTime:'2026-07-09T20:00:00Z', venue:'TBD', city:'TBD', country:'USA', group:'QF', round:'Cuartos',        homeScore:null, awayScore:null, status:'scheduled' },
+  { id:'m098', matchNumber:98,  homeTeam:'W-M91',   awayTeam:'W-M92',   utcDateTime:'2026-07-10T00:00:00Z', venue:'TBD', city:'TBD', country:'USA', group:'QF', round:'Cuartos',        homeScore:null, awayScore:null, status:'scheduled' },
+  { id:'m099', matchNumber:99,  homeTeam:'W-M93',   awayTeam:'W-M94',   utcDateTime:'2026-07-10T20:00:00Z', venue:'TBD', city:'TBD', country:'USA', group:'QF', round:'Cuartos',        homeScore:null, awayScore:null, status:'scheduled' },
+  { id:'m100', matchNumber:100, homeTeam:'W-M95',   awayTeam:'W-M96',   utcDateTime:'2026-07-11T17:00:00Z', venue:'TBD', city:'TBD', country:'USA', group:'QF', round:'Cuartos',        homeScore:null, awayScore:null, status:'scheduled' },
+  // Semifinales
+  { id:'m101', matchNumber:101, homeTeam:'W-M97',   awayTeam:'W-M98',   utcDateTime:'2026-07-14T19:00:00Z', venue:'AT&T Stadium', city:'Arlington', country:'USA', group:'SF', round:'Semifinal', homeScore:null, awayScore:null, status:'scheduled' },
+  { id:'m102', matchNumber:102, homeTeam:'W-M99',   awayTeam:'W-M100',  utcDateTime:'2026-07-15T19:00:00Z', venue:'Mercedes-Benz Stadium', city:'Atlanta', country:'USA', group:'SF', round:'Semifinal', homeScore:null, awayScore:null, status:'scheduled' },
+  // Tercer puesto y Final
+  { id:'m103', matchNumber:103, homeTeam:'L-M101',  awayTeam:'L-M102',  utcDateTime:'2026-07-18T19:00:00Z', venue:'Hard Rock Stadium', city:'Miami', country:'USA', group:'3P', round:'Tercer puesto', homeScore:null, awayScore:null, status:'scheduled' },
+  { id:'m104', matchNumber:104, homeTeam:'W-M101',  awayTeam:'W-M102',  utcDateTime:'2026-07-19T19:00:00Z', venue:'MetLife Stadium', city:'East Rutherford', country:'USA', group:'F', round:'Final', homeScore:null, awayScore:null, status:'scheduled' },
 ];
 
 async function seed() {

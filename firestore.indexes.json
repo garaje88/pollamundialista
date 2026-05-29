@@ -1,6 +1,14 @@
 {
   "indexes": [
     {
+      "collectionGroup": "predictions",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "userId", "order": "ASCENDING" },
+        { "fieldPath": "updatedAt", "order": "DESCENDING" }
+      ]
+    },
+    {
       "collectionGroup": "matches",
       "queryScope": "COLLECTION",
       "fields": [
@@ -12,8 +20,8 @@
       "collectionGroup": "predictions",
       "queryScope": "COLLECTION",
       "fields": [
-        { "fieldPath": "userId", "order": "ASCENDING" },
-        { "fieldPath": "updatedAt", "order": "DESCENDING" }
+        { "fieldPath": "matchId", "order": "ASCENDING" },
+        { "fieldPath": "userId", "order": "ASCENDING" }
       ]
     }
   ],

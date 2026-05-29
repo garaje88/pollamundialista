@@ -7,7 +7,7 @@
   },
   "scripts": {
     "dev": "astro dev",
-    "build": "astro build",
+    "build": "astro build && node scripts/patch-cloudflare-wrangler.js",
     "preview": "astro preview",
     "astro": "astro",
     "seed": "tsx scripts/seed-matches.ts"
@@ -22,6 +22,7 @@
     "react-dom": "^19.2.6"
   },
   "devDependencies": {
+    "@astrojs/cloudflare": "^13.6.0",
     "@astrojs/node": "^10.1.2",
     "firebase-admin": "^13.10.0",
     "tsx": "^4.22.3"

@@ -48,6 +48,7 @@ const {
         <a href="/mis-predicciones" class={`nav-link ${activePage === 'predicciones' ? 'active' : ''}`}>Mis Picks</a>
         <a href="/clasificacion"    class={`nav-link ${activePage === 'clasificacion'? 'active' : ''}`}>Tabla</a>
         <a href="/grupos"           class={`nav-link ${activePage === 'grupos'       ? 'active' : ''}`}>Grupos</a>
+        <a href="/avanza" class={`nav-link ${activePage === 'avanza' ? 'active' : ''}`}>Bracket</a>
         <a href="/admin" class="nav-link" id="nav-admin" style="display:none;">Admin</a>
       </div>
 
@@ -151,7 +152,7 @@ const {
         authDiv.innerHTML = `
           <a href="/mis-predicciones" class="nav-link" style="display:flex;align-items:center;gap:0.5rem;color:var(--color-text-2);">
             <span style="background:var(--color-primary);color:#fff;width:1.9rem;height:1.9rem;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-weight:600;font-size:0.78rem;flex-shrink:0;">${initial}</span>
-            <span style="font-size:0.88rem;">${user.displayName?.split(' ')[0] || 'Mi cuenta'}</span>
+            <span style="font-size:0.88rem;">${user.displayName || 'Mi cuenta'}</span>
           </a>
           <button id="btn-logout" class="btn btn-outline-light btn-sm">
             Salir
