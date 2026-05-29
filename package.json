@@ -7,7 +7,7 @@
   },
   "scripts": {
     "dev": "astro dev",
-    "build": "astro build",
+    "build": "astro build && node scripts/patch-cloudflare-wrangler.js",
     "preview": "astro preview",
     "astro": "astro",
     "seed": "tsx scripts/seed-matches.ts"
