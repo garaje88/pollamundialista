@@ -1,0 +1,52 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isAdmin() {
+      return request.auth != null &&
+             request.auth.token.email in ['cpolanco@saludtools.com'];
+    }
+
+    // Partidos: lectura pública, escritura solo admin
+    match /matches/{matchId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // Clasificaciones de grupo: lectura pública, escritura solo admin
+    match /standings/{groupId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // Usuarios: lectura pública (para tabla de posiciones),
+    // escritura solo del propio perfil autenticado
+    match /users/{userId} {
+      allow read: if true;
+      allow create: if request.auth != null && request.auth.uid == userId;
+      allow update: if request.auth != null && request.auth.uid == userId;
+      allow delete: if false;
+    }
+
+    // Predicciones: el ID es "{uid}_{matchId}"
+    // Solo el dueño puede leer y escribir sus predicciones.
+    // La regla de read usa resource.data.userId (no el ID del documento)
+    // para que las consultas de colección con where('userId','==',uid) funcionen.
+    match /predictions/{predictionId} {
+      allow read: if request.auth != null
+        && resource.data.userId == request.auth.uid;
+      // create: solo cuando el partido sigue en estado 'scheduled'
+      allow create: if request.auth != null
+        && request.resource.data.userId == request.auth.uid
+        && get(/databases/$(database)/documents/matches/$(request.resource.data.matchId)).data.status == 'scheduled';
+
+      // update: mismo dueño + partido aún no iniciado
+      allow update: if request.auth != null
+        && resource.data.userId == request.auth.uid
+        && request.resource.data.userId == request.auth.uid
+        && get(/databases/$(database)/documents/matches/$(resource.data.matchId)).data.status == 'scheduled';
+
+      allow delete: if false;
+    }
+  }
+}

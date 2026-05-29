@@ -1,0 +1,289 @@
+---
+import Layout from '../layouts/Layout.astro';
+
+const groupLetters = ['A','B','C','D','E','F','G','H','I','J','K','L'];
+---
+
+<Layout title="Admin" activePage="">
+  <div class="page-header">
+    <div class="container">
+      <div class="section-label">Panel de administración</div>
+      <h1>Actualizar Marcadores</h1>
+      <p>Ingresa los resultados de los partidos y actualiza las tablas de posiciones.</p>
+    </div>
+  </div>
+
+  <section style="padding:2.5rem 0;">
+    <div class="container">
+
+      <div id="admin-loading" style="text-align:center;padding:4rem 0;">
+        <div class="spinner" style="margin:0 auto;"></div>
+        <p style="margin-top:1rem;color:var(--color-text-3);">Verificando acceso...</p>
+      </div>
+
+      <div id="admin-denied" style="display:none;text-align:center;padding:4rem 0;">
+        <div style="font-size:3rem;margin-bottom:1rem;">🔒</div>
+        <h3>Acceso restringido</h3>
+        <p style="margin-top:0.75rem;color:var(--color-text-3);">Esta página es solo para administradores.</p>
+        <a href="/" class="btn btn-primary" style="margin-top:1.5rem;display:inline-block;">Volver al inicio</a>
+      </div>
+
+      <div id="admin-content" style="display:none;">
+
+        <div id="admin-status" style="display:none;margin-bottom:1.5rem;padding:0.85rem 1.25rem;border-radius:var(--radius-sm);font-size:0.88rem;font-weight:600;"></div>
+
+        <div class="tabs" id="admin-tabs" style="flex-wrap:wrap;margin-bottom:1.5rem;">
+          {groupLetters.map((l, i) => (
+            <button class={`tab-btn${i === 0 ? ' active' : ''}`} data-group={l}>Grupo {l}</button>
+          ))}
+        </div>
+
+        <div id="admin-matches-loading" style="text-align:center;padding:3rem 0;">
+          <div class="spinner" style="margin:0 auto;"></div>
+        </div>
+
+        <div id="admin-matches" style="display:none;"></div>
+
+      </div>
+    </div>
+  </section>
+</Layout>
+
+<script>
+  import { auth, onAuthStateChanged, db, collection, query, orderBy, getDocs } from '../lib/firebase';
+  import { updateMatchScore, recalculateGroupStandings } from '../lib/db';
+
+  const ADMIN_EMAILS = [import.meta.env.PUBLIC_ADMIN_EMAIL].filter(Boolean);
+
+  const WC_GROUPS: Record<string, string[]> = {
+    A: ['Mexico','South Africa','South Korea','Czech Republic'],
+    B: ['Canada','Bosnia and Herzegovina','Qatar','Switzerland'],
+    C: ['Brazil','Morocco','Haiti','Scotland'],
+    D: ['United States','Paraguay','Australia','Turkey'],
+    E: ['Germany','Curacao','Ivory Coast','Ecuador'],
+    F: ['Netherlands','Japan','Sweden','Tunisia'],
+    G: ['Belgium','Egypt','Iran','New Zealand'],
+    H: ['Spain','Uruguay','Saudi Arabia','Cape Verde'],
+    I: ['France','Senegal','Iraq','Norway'],
+    J: ['Argentina','Algeria','Austria','Jordan'],
+    K: ['Portugal','DR Congo','Uzbekistan','Colombia'],
+    L: ['England','Croatia','Ghana','Panama'],
+  };
+
+  const FLAG: Record<string, string> = {
+    'Mexico':'mx','South Africa':'za','South Korea':'kr','Czech Republic':'cz',
+    'Canada':'ca','Bosnia and Herzegovina':'ba','Qatar':'qa','Switzerland':'ch',
+    'Brazil':'br','Morocco':'ma','Haiti':'ht','Scotland':'gb-sct',
+    'United States':'us','Paraguay':'py','Australia':'au','Turkey':'tr',
+    'Germany':'de','Curacao':'cw','Ivory Coast':'ci','Ecuador':'ec',
+    'Netherlands':'nl','Japan':'jp','Sweden':'se','Tunisia':'tn',
+    'Belgium':'be','Egypt':'eg','Iran':'ir','New Zealand':'nz',
+    'Spain':'es','Cape Verde':'cv','Saudi Arabia':'sa','Uruguay':'uy',
+    'France':'fr','Senegal':'sn','Iraq':'iq','Norway':'no',
+    'Argentina':'ar','Algeria':'dz','Austria':'at','Jordan':'jo',
+    'Portugal':'pt','DR Congo':'cd','Uzbekistan':'uz','Colombia':'co',
+    'England':'gb-eng','Croatia':'hr','Ghana':'gh','Panama':'pa',
+  };
+
+  const flag = (t: string) => `https://flagcdn.com/w80/${FLAG[t] ?? t.slice(0,2).toLowerCase()}.png`;
+
+  const fmtDate = (utc: string) => {
+    try {
+      return new Date(utc).toLocaleDateString('es-CO', {
+        weekday: 'short', day: 'numeric', month: 'short',
+        hour: '2-digit', minute: '2-digit', timeZone: 'America/Bogota',
+      });
+    } catch { return utc; }
+  };
+
+  let allMatches: any[] = [];
+  let currentGroup = 'A';
+
+  function show(id: string) { (document.getElementById(id) as HTMLElement).style.display = ''; }
+  function hide(id: string) { (document.getElementById(id) as HTMLElement).style.display = 'none'; }
+
+  function showStatus(msg: string, ok: boolean) {
+    const el = document.getElementById('admin-status') as HTMLElement;
+    el.textContent = msg;
+    el.style.background = ok ? 'rgba(26,122,74,0.12)' : 'rgba(214,40,57,0.1)';
+    el.style.color = ok ? 'var(--color-green)' : 'var(--color-accent)';
+    el.style.border = ok ? '1px solid rgba(26,122,74,0.3)' : '1px solid rgba(214,40,57,0.3)';
+    el.style.display = 'block';
+    setTimeout(() => { el.style.display = 'none'; }, 4000);
+  }
+
+  async function loadMatches() {
+    try {
+      const snap = await getDocs(query(collection(db, 'matches'), orderBy('utcDateTime', 'asc')));
+      allMatches = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      hide('admin-matches-loading');
+      show('admin-matches');
+      renderGroup(currentGroup);
+    } catch (e) {
+      console.error(e);
+      showStatus('Error cargando partidos', false);
+    }
+  }
+
+  function renderGroup(group: string) {
+    const matches = allMatches.filter((m: any) => m.group === group);
+    const container = document.getElementById('admin-matches') as HTMLElement;
+
+    container.innerHTML = `
+      <div style="display:flex;flex-direction:column;gap:0.75rem;">
+        ${matches.map((m: any) => {
+          const finished = m.status === 'finished';
+          const live = m.status === 'live';
+          const statusBadge = finished
+            ? '<span class="badge badge-green">Finalizado</span>'
+            : live
+            ? '<span style="background:var(--color-gold);color:#1A2B52;padding:0.15rem 0.6rem;border-radius:4px;font-size:0.72rem;font-weight:700;">En vivo</span>'
+            : '<span style="background:var(--color-surface-2);color:var(--color-text-3);padding:0.15rem 0.6rem;border-radius:4px;font-size:0.72rem;font-weight:600;border:1px solid var(--color-border);">Programado</span>';
+          return `
+          <div class="card" style="padding:1rem 1.25rem;">
+            <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.75rem;">
+              <span style="font-size:0.75rem;color:var(--color-text-3);">P${m.matchNumber} · ${fmtDate(m.utcDateTime)} · ${m.venue}</span>
+              <span style="margin-left:auto;">${statusBadge}</span>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr auto 1fr;gap:1rem;align-items:center;">
+              <div style="display:flex;align-items:center;gap:0.6rem;">
+                <img src="${flag(m.homeTeam)}" style="width:28px;height:18px;object-fit:cover;border-radius:2px;" onerror="this.src='https://flagcdn.com/w40/un.png'">
+                <span style="font-weight:600;font-size:0.9rem;">${m.homeTeam}</span>
+              </div>
+              <div style="display:flex;align-items:center;gap:0.5rem;">
+                <input type="number" min="0" max="30" step="1" class="input-score" id="h-${m.id}"
+                  value="${m.homeScore != null ? m.homeScore : ''}" placeholder="0"
+                  style="width:3rem;text-align:center;padding:0.4rem 0.3rem;">
+                <span style="font-family:var(--font-display);font-weight:700;font-size:1.2rem;color:var(--color-text-3);">-</span>
+                <input type="number" min="0" max="30" step="1" class="input-score" id="a-${m.id}"
+                  value="${m.awayScore != null ? m.awayScore : ''}" placeholder="0"
+                  style="width:3rem;text-align:center;padding:0.4rem 0.3rem;">
+              </div>
+              <div style="display:flex;align-items:center;gap:0.6rem;justify-content:flex-end;">
+                <span style="font-weight:600;font-size:0.9rem;">${m.awayTeam}</span>
+                <img src="${flag(m.awayTeam)}" style="width:28px;height:18px;object-fit:cover;border-radius:2px;" onerror="this.src='https://flagcdn.com/w40/un.png'">
+              </div>
+            </div>
+            <div style="margin-top:0.85rem;display:flex;justify-content:flex-end;gap:0.5rem;">
+              <button class="btn btn-primary btn-sm" id="save-${m.id}" data-match-id="${m.id}" data-group="${m.group}">
+                Guardar resultado
+              </button>
+            </div>
+          </div>`;
+        }).join('')}
+        <div style="margin-top:0.5rem;padding-top:1rem;border-top:1px solid var(--color-border);display:flex;justify-content:flex-end;">
+          <button class="btn btn-outline btn-sm" id="recalc-${group}" data-group="${group}">
+            Recalcular tabla Grupo ${group}
+          </button>
+        </div>
+      </div>
+    `;
+
+    matches.forEach((m: any) => {
+      document.getElementById(`save-${m.id}`)?.addEventListener('click', () => saveScore(m.id, m.group));
+    });
+    document.getElementById(`recalc-${group}`)?.addEventListener('click', () => recalcGroup(group));
+  }
+
+  async function saveScore(matchId: string, group: string) {
+    const btn = document.getElementById(`save-${matchId}`) as HTMLButtonElement;
+    const hVal = (document.getElementById(`h-${matchId}`) as HTMLInputElement).valueAsNumber;
+    const aVal = (document.getElementById(`a-${matchId}`) as HTMLInputElement).valueAsNumber;
+    if (isNaN(hVal) || isNaN(aVal) || hVal < 0 || aVal < 0 || !Number.isInteger(hVal) || !Number.isInteger(aVal)) {
+      showStatus('Ingresa el marcador para ambos equipos. El mínimo permitido es 0.', false);
+      return;
+    }
+    btn.disabled = true;
+    btn.textContent = 'Guardando...';
+    try {
+      await updateMatchScore(matchId, hVal, aVal);
+      await recalculateGroupStandings(group, WC_GROUPS[group]);
+      allMatches = allMatches.map((m: any) =>
+        m.id === matchId ? { ...m, homeScore: hVal, awayScore: aVal, status: 'finished' } : m
+      );
+      showStatus(`Resultado guardado y tabla Grupo ${group} actualizada.`, true);
+      renderGroup(group);
+    } catch (e: any) {
+      console.error(e);
+      const isPermDenied = e?.code === 'permission-denied';
+      showStatus(
+        isPermDenied
+          ? 'Sin permisos. Despliega las reglas de Firestore: firebase deploy --only firestore:rules'
+          : `Error: ${e?.message ?? 'desconocido'}`,
+        false
+      );
+      btn.disabled = false;
+      btn.textContent = 'Guardar resultado';
+    }
+  }
+
+  async function recalcGroup(group: string) {
+    const btn = document.getElementById(`recalc-${group}`) as HTMLButtonElement;
+    btn.disabled = true;
+    btn.textContent = 'Recalculando...';
+    try {
+      await recalculateGroupStandings(group, WC_GROUPS[group]);
+      showStatus(`Tabla Grupo ${group} recalculada correctamente.`, true);
+    } catch (e: any) {
+      console.error(e);
+      const isPermDenied = e?.code === 'permission-denied';
+      showStatus(
+        isPermDenied
+          ? 'Sin permisos. Despliega las reglas de Firestore: firebase deploy --only firestore:rules'
+          : `Error: ${e?.message ?? 'desconocido'}`,
+        false
+      );
+    }
+    btn.disabled = false;
+    btn.textContent = `Recalcular tabla Grupo ${group}`;
+  }
+
+  function setupTabs() {
+    document.querySelectorAll('#admin-tabs .tab-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('#admin-tabs .tab-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        currentGroup = (btn as HTMLElement).dataset.group ?? 'A';
+        renderGroup(currentGroup);
+      });
+    });
+  }
+
+  onAuthStateChanged(auth, async (user) => {
+    hide('admin-loading');
+    if (!user || !ADMIN_EMAILS.includes(user.email ?? '')) {
+      show('admin-denied');
+      return;
+    }
+    show('admin-content');
+    setupTabs();
+    await loadMatches();
+  });
+</script>
+
+<style>
+.input-score {
+  width: 3rem;
+  border: 1.5px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  font-family: var(--font-display);
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--color-text);
+  background: var(--color-surface);
+  transition: border-color 0.15s;
+}
+.input-score:focus {
+  outline: none;
+  border-color: var(--color-primary);
+}
+.btn-outline {
+  border: 1.5px solid var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-text-2);
+}
+.btn-outline:hover {
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+}
+</style>

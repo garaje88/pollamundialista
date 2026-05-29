@@ -1,0 +1,170 @@
+---
+import Layout from '../layouts/Layout.astro';
+
+const groupLetters = ['A','B','C','D','E','F','G','H','I','J','K','L'];
+---
+
+<Layout title="Grupos" activePage="grupos">
+  <div class="page-header">
+    <div class="container">
+      <div class="section-label">Fase de grupos</div>
+      <h1>Grupos del Mundial 2026</h1>
+      <p>48 selecciones · 12 grupos · Clasifican Top 2 por grupo + 8 mejores terceros = 32 a octavos</p>
+    </div>
+  </div>
+
+  <section style="padding:2.5rem 0;">
+    <div class="container">
+      <div class="card" style="padding:1.25rem 1.5rem;margin-bottom:2rem;display:flex;gap:2rem;flex-wrap:wrap;align-items:center;background:var(--color-primary-light);border-color:rgba(10,36,114,0.15);">
+        <div>
+          <div style="font-family:var(--font-display);font-weight:900;font-size:1.1rem;color:var(--color-primary);">Formato nuevo 2026</div>
+          <div style="font-size:0.85rem;color:var(--color-text-2);margin-top:0.25rem;">
+            12 grupos de 4 · Clasifican Top 2 + 8 mejores terceros = 32 equipos a octavos
+          </div>
+        </div>
+        <div style="display:flex;gap:2rem;margin-left:auto;flex-wrap:wrap;">
+          {[{ label: '12', sub: 'Grupos' }, { label: '48', sub: 'Equipos' }, { label: '32', sub: 'A octavos' }].map(s => (
+            <div style="text-align:center;">
+              <div style="font-family:var(--font-display);font-weight:900;font-size:1.6rem;color:var(--color-primary);">{s.label}</div>
+              <div style="font-size:0.72rem;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-text-3);font-weight:600;">{s.sub}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:1.5rem;" id="groups-grid">
+        {groupLetters.map(letter => (
+          <div class="card" id={`group-card-${letter}`}>
+            <div style="padding:1rem 1.25rem;background:linear-gradient(135deg,var(--color-primary),var(--color-primary-600));display:flex;align-items:center;gap:0.75rem;">
+              <div style="width:2.5rem;height:2.5rem;border-radius:50%;background:var(--color-gold);color:var(--color-primary);display:flex;align-items:center;justify-content:center;font-family:var(--font-display);font-weight:900;font-size:1.2rem;">
+                {letter}
+              </div>
+              <span style="font-family:var(--font-display);font-weight:700;color:#fff;font-size:1rem;">Grupo {letter}</span>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr repeat(3,2.2rem);gap:0.5rem;padding:0.5rem 1rem;border-bottom:1px solid var(--color-border);background:var(--color-surface-2);">
+              <span style="font-size:0.65rem;text-transform:uppercase;letter-spacing:0.08em;color:var(--color-text-3);font-weight:700;">Equipo</span>
+              <span style="font-size:0.65rem;text-align:center;color:var(--color-text-3);font-weight:700;">PJ</span>
+              <span style="font-size:0.65rem;text-align:center;color:var(--color-text-3);font-weight:700;">GD</span>
+              <span style="font-size:0.65rem;text-align:center;color:var(--color-gold);font-weight:700;">Pts</span>
+            </div>
+            <div id={`teams-${letter}`} style="min-height:160px;display:flex;align-items:center;justify-content:center;">
+              <div class="spinner" style="width:24px;height:24px;border-width:2px;"></div>
+            </div>
+            <div style="padding:0.5rem 1rem;background:rgba(45,106,79,0.06);border-top:1px solid var(--color-border);">
+              <span style="font-size:0.7rem;color:var(--color-green);font-weight:600;">▌ Clasifican Top 2 a Octavos de Final</span>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <div style="margin-top:3rem;padding:2rem;background:var(--color-surface);border-radius:var(--radius-md);border:1px solid var(--color-border);text-align:center;">
+        <div class="section-label">Calendario del torneo</div>
+        <div style="display:flex;justify-content:center;gap:2rem;margin-top:1.5rem;flex-wrap:wrap;">
+          {[
+            { phase: 'Fase de Grupos', dates: '11 jun – 2 jul', color: 'var(--color-primary)' },
+            { phase: 'Octavos de Final', dates: '4 – 9 jul', color: 'var(--color-green)' },
+            { phase: 'Cuartos de Final', dates: '11 – 12 jul', color: 'var(--color-accent)' },
+            { phase: 'Semifinales', dates: '14 – 15 jul', color: '#8B6C00' },
+            { phase: 'Final', dates: '19 jul 2026', color: 'var(--color-gold)' },
+          ].map(p => (
+            <div style="text-align:center;min-width:110px;">
+              <div style={`width:10px;height:10px;border-radius:50%;background:${p.color};margin:0 auto 0.5rem;`}></div>
+              <div style="font-family:var(--font-display);font-weight:700;font-size:0.9rem;color:var(--color-text);">{p.phase}</div>
+              <div style="font-size:0.75rem;color:var(--color-text-3);">{p.dates}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  </section>
+</Layout>
+
+<script>
+  import { db, collection, getDocs } from '../lib/firebase';
+
+  const WC_GROUPS: Record<string, string[]> = {
+    A: ['Mexico','South Africa','South Korea','Czech Republic'],
+    B: ['Canada','Bosnia and Herzegovina','Qatar','Switzerland'],
+    C: ['Brazil','Morocco','Haiti','Scotland'],
+    D: ['United States','Paraguay','Australia','Turkey'],
+    E: ['Germany','Curacao','Ivory Coast','Ecuador'],
+    F: ['Netherlands','Japan','Sweden','Tunisia'],
+    G: ['Belgium','Egypt','Iran','New Zealand'],
+    H: ['Spain','Uruguay','Saudi Arabia','Cape Verde'],
+    I: ['France','Senegal','Iraq','Norway'],
+    J: ['Argentina','Algeria','Austria','Jordan'],
+    K: ['Portugal','DR Congo','Uzbekistan','Colombia'],
+    L: ['England','Croatia','Ghana','Panama'],
+  };
+
+  const FLAG: Record<string, string> = {
+    'Mexico':'mx','South Africa':'za','South Korea':'kr','Czech Republic':'cz',
+    'Canada':'ca','Bosnia and Herzegovina':'ba','Qatar':'qa','Switzerland':'ch',
+    'Brazil':'br','Morocco':'ma','Haiti':'ht','Scotland':'gb-sct',
+    'United States':'us','Paraguay':'py','Australia':'au','Turkey':'tr',
+    'Germany':'de','Curacao':'cw','Ivory Coast':'ci','Ecuador':'ec',
+    'Netherlands':'nl','Japan':'jp','Sweden':'se','Tunisia':'tn',
+    'Belgium':'be','Egypt':'eg','Iran':'ir','New Zealand':'nz',
+    'Spain':'es','Cape Verde':'cv','Saudi Arabia':'sa','Uruguay':'uy',
+    'France':'fr','Senegal':'sn','Iraq':'iq','Norway':'no',
+    'Argentina':'ar','Algeria':'dz','Austria':'at','Jordan':'jo',
+    'Portugal':'pt','DR Congo':'cd','Uzbekistan':'uz','Colombia':'co',
+    'England':'gb-eng','Croatia':'hr','Ghana':'gh','Panama':'pa',
+  };
+
+  const flag = (t: string) => `https://flagcdn.com/w80/${FLAG[t] ?? t.slice(0,2).toLowerCase()}.png`;
+
+  interface StandingRow { team: string; PJ?: number; GD?: number; Pts?: number; }
+
+  function renderTeams(letter: string, teams: StandingRow[], hasData: boolean) {
+    const container = document.getElementById(`teams-${letter}`);
+    if (!container) return;
+    container.style.display = 'block';
+    container.innerHTML = teams.map((t, idx) => `
+      <div style="display:grid;grid-template-columns:1fr repeat(3,2.2rem);gap:0.5rem;padding:0.65rem 1rem;align-items:center;${idx < teams.length - 1 ? 'border-bottom:1px solid var(--color-border);' : ''}${idx < 2 ? 'background:rgba(45,106,79,0.04);' : ''}">
+        <div style="display:flex;align-items:center;gap:0.5rem;min-width:0;">
+          ${idx < 2 ? '<div style="width:3px;height:1.4rem;background:var(--color-green);border-radius:2px;flex-shrink:0;"></div>' : ''}
+          <img src="${flag(t.team)}" alt="${t.team}" style="width:22px;height:15px;object-fit:cover;border-radius:2px;flex-shrink:0;" onerror="this.src='https://flagcdn.com/w40/un.png'" />
+          <span style="font-size:0.82rem;font-weight:600;color:var(--color-text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${t.team}</span>
+        </div>
+        <span style="text-align:center;font-size:0.8rem;color:var(--color-text-3);">${hasData ? (t.PJ ?? 0) : '-'}</span>
+        <span style="text-align:center;font-size:0.8rem;color:var(--color-text-3);">${hasData ? (t.GD != null ? (t.GD > 0 ? '+' + t.GD : t.GD) : 0) : '-'}</span>
+        <span style="text-align:center;font-family:var(--font-display);font-weight:800;font-size:0.9rem;color:var(--color-primary);">${hasData ? (t.Pts ?? 0) : '-'}</span>
+      </div>
+    `).join('');
+  }
+
+  function renderDefault(letter: string) {
+    const teams = WC_GROUPS[letter].map(t => ({ team: t }));
+    renderTeams(letter, teams, false);
+  }
+
+  async function loadStandings() {
+    try {
+      const snap = await getDocs(collection(db, 'standings'));
+      const map: Record<string, any[]> = {};
+      snap.docs.forEach(d => { map[d.id] = (d.data() as any).teams ?? []; });
+
+      for (const letter of Object.keys(WC_GROUPS)) {
+        if (map[letter]?.length) {
+          renderTeams(letter, map[letter], true);
+        } else {
+          renderDefault(letter);
+        }
+      }
+    } catch {
+      for (const letter of Object.keys(WC_GROUPS)) renderDefault(letter);
+    }
+  }
+
+  loadStandings();
+</script>
+
+<style>
+@media (max-width: 900px) {
+  #groups-grid { grid-template-columns: repeat(2, 1fr) !important; }
+}
+@media (max-width: 580px) {
+  #groups-grid { grid-template-columns: 1fr !important; }
+}
+</style>

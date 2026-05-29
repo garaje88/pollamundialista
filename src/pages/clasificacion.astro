@@ -1,0 +1,131 @@
+---
+// src/pages/clasificacion.astro
+import Layout from '../layouts/Layout.astro';
+---
+
+<Layout title="Clasificación" activePage="clasificacion">
+  <div class="page-header">
+    <div class="container">
+      <div class="section-label">Tabla general</div>
+      <h1>Clasificación</h1>
+      <p>Los mejores pronosticadores de la polla.</p>
+    </div>
+  </div>
+
+  <section style="padding:2.5rem 0;">
+    <div class="container" style="max-width:760px;margin:0 auto;">
+
+      <!-- Legend -->
+      <div style="display:flex;gap:1rem;margin-bottom:1.5rem;flex-wrap:wrap;">
+        <div style="display:flex;align-items:center;gap:0.4rem;font-size:0.8rem;color:var(--color-text-3);">
+          <span style="width:1rem;height:1rem;border-radius:2px;background:var(--color-gold);display:inline-block;"></span> 1° lugar
+        </div>
+        <div style="display:flex;align-items:center;gap:0.4rem;font-size:0.8rem;color:var(--color-text-3);">
+          <span style="width:1rem;height:1rem;border-radius:2px;background:#8C9BB3;display:inline-block;"></span> 2° lugar
+        </div>
+        <div style="display:flex;align-items:center;gap:0.4rem;font-size:0.8rem;color:var(--color-text-3);">
+          <span style="width:1rem;height:1rem;border-radius:2px;background:#A87B52;display:inline-block;"></span> 3° lugar
+        </div>
+      </div>
+
+      <!-- Loading -->
+      <div id="loading-board" style="text-align:center;padding:3rem;">
+        <div class="spinner" style="margin:0 auto;"></div>
+        <p style="margin-top:1rem;color:var(--color-text-3);">Cargando tabla...</p>
+      </div>
+
+      <!-- Table -->
+      <div class="card" id="leaderboard-card" style="display:none;">
+        <!-- Table header -->
+        <div style="display:grid;grid-template-columns:2.5rem 1fr auto auto auto;gap:1rem;align-items:center;padding:0.75rem 1.5rem;background:var(--color-surface-2);border-bottom:2px solid var(--color-border);">
+          <div style="font-family:var(--font-display);font-weight:700;font-size:0.75rem;color:var(--color-text-3);text-transform:uppercase;letter-spacing:0.08em;">#</div>
+          <div style="font-family:var(--font-display);font-weight:700;font-size:0.75rem;color:var(--color-text-3);text-transform:uppercase;letter-spacing:0.08em;">Jugador</div>
+          <div style="font-family:var(--font-display);font-weight:700;font-size:0.75rem;color:var(--color-text-3);text-transform:uppercase;letter-spacing:0.08em;text-align:right;">Exactos</div>
+          <div style="font-family:var(--font-display);font-weight:700;font-size:0.75rem;color:var(--color-text-3);text-transform:uppercase;letter-spacing:0.08em;text-align:right;">Ganadores</div>
+          <div style="font-family:var(--font-display);font-weight:700;font-size:0.75rem;color:var(--color-gold);text-transform:uppercase;letter-spacing:0.08em;text-align:right;">Pts</div>
+        </div>
+        <div id="leaderboard-rows"></div>
+      </div>
+
+      <!-- Empty state -->
+      <div id="empty-board" style="display:none;text-align:center;padding:4rem 0;">
+        <div style="font-size:3rem;margin-bottom:1rem;">🏆</div>
+        <h3>La tabla está vacía</h3>
+        <p style="margin:0.75rem 0 1.5rem;">Sé el primero en hacer predicciones y aparecer aquí.</p>
+        <a href="/partidos" class="btn btn-primary">Ver partidos →</a>
+      </div>
+
+      <!-- My position (logged in) -->
+      <div id="my-position" style="display:none;margin-top:1.5rem;" ></div>
+    </div>
+  </section>
+</Layout>
+
+<script>
+  import { auth, onAuthStateChanged } from '../lib/firebase';
+  import { getLeaderboard } from '../lib/db';
+
+  async function loadLeaderboard() {
+    const rows = await getLeaderboard(30);
+    document.getElementById('loading-board')!.style.display = 'none';
+
+    if (rows.length === 0) {
+      document.getElementById('empty-board')!.style.display = 'block';
+      return;
+    }
+
+    document.getElementById('leaderboard-card')!.style.display = 'block';
+    const container = document.getElementById('leaderboard-rows')!;
+
+    const rankIcons = ['🥇', '🥈', '🥉'];
+    const rankColors = ['var(--color-gold)', '#8C9BB3', '#A87B52'];
+
+    rows.forEach((entry, i) => {
+      const rank = i + 1;
+      const initial = (entry.displayName || '?')[0].toUpperCase();
+      const isTop = rank <= 3;
+      const div = document.createElement('div');
+      div.className = 'leaderboard-row';
+      div.style.gridTemplateColumns = '2.5rem 1fr auto auto auto';
+      div.innerHTML = `
+        <div class="rank-number${rank <= 3 ? ` rank-${rank}` : ''}">
+          ${rank <= 3 ? rankIcons[rank - 1] : rank}
+        </div>
+        <div style="display:flex;align-items:center;gap:0.75rem;">
+          <div style="width:2.2rem;height:2.2rem;border-radius:50%;background:${isTop ? rankColors[rank-1] : 'var(--color-primary)'};color:${rank === 1 ? 'var(--color-primary)' : '#fff'};display:flex;align-items:center;justify-content:center;font-family:var(--font-display);font-weight:700;font-size:0.85rem;flex-shrink:0;">
+            ${initial}
+          </div>
+          <span style="font-weight:600;color:var(--color-text);font-size:0.95rem;">${entry.displayName}</span>
+        </div>
+        <div style="text-align:right;font-family:var(--font-display);font-weight:700;font-size:0.9rem;color:var(--color-green);">${entry.exactResults}</div>
+        <div style="text-align:right;font-family:var(--font-display);font-weight:700;font-size:0.9rem;color:var(--color-text-2);">${entry.correctWinners}</div>
+        <div style="text-align:right;">
+          <span style="font-family:var(--font-display);font-weight:900;font-size:1.2rem;color:var(--color-primary);">${entry.totalPoints}</span>
+          <span style="font-size:0.7rem;color:var(--color-text-3);margin-left:2px;">pts</span>
+        </div>
+      `;
+      container.appendChild(div);
+    });
+
+    // Highlight current user position
+    onAuthStateChanged(auth, (user) => {
+      if (!user) return;
+      const idx = rows.findIndex(r => r.uid === user.uid);
+      if (idx === -1) return;
+      const myBox = document.getElementById('my-position')!;
+      myBox.style.display = 'block';
+      myBox.innerHTML = `
+        <div class="card" style="padding:1rem 1.5rem;background:rgba(10,36,114,0.05);border-color:var(--color-primary);">
+          <div style="display:flex;align-items:center;gap:0.75rem;flex-wrap:wrap;">
+            <span class="badge badge-primary">Tu posición</span>
+            <strong style="font-family:var(--font-display);font-size:1.3rem;color:var(--color-primary);">#${idx + 1}</strong>
+            <span style="color:var(--color-text-2);font-size:0.9rem;">de ${rows.length} participantes</span>
+            <span style="margin-left:auto;font-family:var(--font-display);font-weight:900;font-size:1.3rem;color:var(--color-gold);">${rows[idx].totalPoints} pts</span>
+          </div>
+        </div>
+      `;
+    });
+  }
+
+  loadLeaderboard();
+</script>

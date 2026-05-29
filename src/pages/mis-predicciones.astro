@@ -1,0 +1,211 @@
+---
+// src/pages/mis-predicciones.astro
+import Layout from '../layouts/Layout.astro';
+---
+
+<Layout title="Mis Predicciones" activePage="predicciones">
+  <div class="page-header">
+    <div class="container">
+      <div class="section-label">Mi espacio</div>
+      <h1>Mis Predicciones</h1>
+    </div>
+  </div>
+
+  <section style="padding:2.5rem 0;">
+    <div class="container">
+      <!-- Not logged in -->
+      <div id="not-logged-in" style="display:none;text-align:center;padding:4rem 0;">
+        <div style="font-size:3rem;margin-bottom:1rem;">🔒</div>
+        <h3>Debes iniciar sesión</h3>
+        <p style="margin:0.75rem 0 1.5rem;">Para ver y gestionar tus predicciones necesitas una cuenta.</p>
+        <div style="display:flex;gap:1rem;justify-content:center;">
+          <a href="/login" class="btn btn-gold">Iniciar sesión con Google</a>
+        </div>
+      </div>
+
+      <!-- Logged in -->
+      <div id="logged-in" style="display:none;">
+        <!-- User summary card -->
+        <div class="card" style="padding:2rem;margin-bottom:2rem;background:linear-gradient(135deg,var(--color-primary),var(--color-primary-600));">
+          <div style="display:flex;align-items:center;gap:1.5rem;flex-wrap:wrap;">
+            <div id="user-avatar" style="width:4rem;height:4rem;border-radius:50%;background:var(--color-gold);color:var(--color-primary);display:flex;align-items:center;justify-content:center;font-family:var(--font-display);font-weight:900;font-size:1.5rem;">U</div>
+            <div style="flex:1;">
+              <div style="font-family:var(--font-display);font-weight:900;font-size:1.5rem;color:#fff;" id="user-name">Cargando...</div>
+              <div style="color:rgba(255,255,255,0.6);font-size:0.85rem;" id="user-email"></div>
+            </div>
+            <div style="display:flex;gap:1.5rem;flex-wrap:wrap;">
+              <div style="text-align:center;">
+                <div style="font-family:var(--font-display);font-weight:900;font-size:2rem;color:var(--color-gold);" id="total-points">0</div>
+                <div style="font-size:0.75rem;color:rgba(255,255,255,0.6);text-transform:uppercase;letter-spacing:0.06em;">Puntos</div>
+              </div>
+              <div style="text-align:center;">
+                <div style="font-family:var(--font-display);font-weight:900;font-size:2rem;color:#fff;" id="total-preds">0</div>
+                <div style="font-size:0.75rem;color:rgba(255,255,255,0.6);text-transform:uppercase;letter-spacing:0.06em;">Picks</div>
+              </div>
+              <div style="text-align:center;">
+                <div style="font-family:var(--font-display);font-weight:900;font-size:2rem;color:var(--color-green-light);" id="exact-results">0</div>
+                <div style="font-size:0.75rem;color:rgba(255,255,255,0.6);text-transform:uppercase;letter-spacing:0.06em;">Exactos</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tabs -->
+        <div class="tabs">
+          <button class="tab-btn active" data-tab="pending">⏳ Pendientes</button>
+          <button class="tab-btn" data-tab="scored">✅ Puntuados</button>
+        </div>
+
+        <!-- Loading -->
+        <div id="loading-preds" style="text-align:center;padding:3rem;">
+          <div class="spinner" style="margin:0 auto;"></div>
+        </div>
+
+        <!-- Predictions list -->
+        <div id="predictions-list" style="display:none;flex-direction:column;gap:1rem;"></div>
+
+        <!-- Empty state -->
+        <div id="empty-preds" style="display:none;text-align:center;padding:3rem;">
+          <div style="font-size:3rem;margin-bottom:1rem;">🎯</div>
+          <h3>Aún no tienes predicciones</h3>
+          <p style="margin:0.75rem 0 1.5rem;">Visita la página de partidos y empieza a predecir.</p>
+          <a href="/partidos" class="btn btn-primary">Ver partidos →</a>
+        </div>
+      </div>
+    </div>
+  </section>
+</Layout>
+
+<script>
+  import { auth, onAuthStateChanged } from '../lib/firebase';
+  import { getUserPredictions, getUserProfile, getMatches } from '../lib/db';
+
+  const FLAG: Record<string, string> = {
+    'Mexico':'mx','South Africa':'za','South Korea':'kr','Czech Republic':'cz',
+    'Canada':'ca','Bosnia and Herzegovina':'ba','Qatar':'qa','Switzerland':'ch',
+    'Brazil':'br','Morocco':'ma','Haiti':'ht','Scotland':'gb-sct',
+    'United States':'us','Paraguay':'py','Australia':'au','Turkey':'tr',
+    'Germany':'de','Curacao':'cw','Ivory Coast':'ci','Ecuador':'ec',
+    'Netherlands':'nl','Japan':'jp','Sweden':'se','Tunisia':'tn',
+    'Belgium':'be','Egypt':'eg','Iran':'ir','New Zealand':'nz',
+    'Spain':'es','Cape Verde':'cv','Saudi Arabia':'sa','Uruguay':'uy',
+    'France':'fr','Senegal':'sn','Iraq':'iq','Norway':'no',
+    'Argentina':'ar','Algeria':'dz','Austria':'at','Jordan':'jo',
+    'Portugal':'pt','DR Congo':'cd','Uzbekistan':'uz','Colombia':'co',
+    'England':'gb-eng','Croatia':'hr','Ghana':'gh','Panama':'pa',
+  };
+
+  const flag = (t: string) => `https://flagcdn.com/w80/${FLAG[t] ?? t.slice(0,2).toLowerCase()}.png`;
+
+  const fmtDate = (utc: string) => {
+    try {
+      return new Date(utc).toLocaleDateString('es-CO', {
+        weekday:'short', day:'numeric', month:'short',
+        hour:'2-digit', minute:'2-digit', timeZone:'America/Bogota',
+      });
+    } catch { return utc; }
+  };
+
+  onAuthStateChanged(auth, async (user) => {
+    if (!user) {
+      document.getElementById('not-logged-in')!.style.display = 'block';
+      return;
+    }
+    document.getElementById('logged-in')!.style.display = 'block';
+
+    const name = user.displayName || user.email || 'Usuario';
+    document.getElementById('user-name')!.textContent = name;
+    document.getElementById('user-email')!.textContent = user.email || '';
+    document.getElementById('user-avatar')!.textContent = name[0].toUpperCase();
+
+    const [profile, preds, allMatches] = await Promise.all([
+      getUserProfile(user.uid),
+      getUserPredictions(user.uid),
+      getMatches(),
+    ]);
+
+    const matchMap = new Map(allMatches.map(m => [m.id, m]));
+
+    if (profile) {
+      document.getElementById('total-points')!.textContent = String(profile.totalPoints);
+      document.getElementById('total-preds')!.textContent  = String(profile.totalPredictions);
+      document.getElementById('exact-results')!.textContent = String(profile.exactResults);
+    }
+
+    document.getElementById('loading-preds')!.style.display = 'none';
+
+    if (preds.length === 0) {
+      document.getElementById('empty-preds')!.style.display = 'block';
+      return;
+    }
+
+    const list = document.getElementById('predictions-list')!;
+    list.style.display = 'flex';
+
+    function renderPredictions(filter: 'pending' | 'scored') {
+      const filtered = preds.filter(p => p.status === filter);
+      list.innerHTML = '';
+      if (filtered.length === 0) {
+        list.innerHTML = `<p style="text-align:center;color:var(--color-text-3);padding:2rem;">
+          ${filter === 'pending' ? 'No tienes predicciones pendientes.' : 'Aún no se han puntuado tus predicciones.'}
+        </p>`;
+        return;
+      }
+      filtered.forEach((pred) => {
+        const match = matchMap.get(pred.matchId);
+        const div = document.createElement('div');
+        div.className = 'card';
+
+        const ptsBg = pred.points === 5 ? 'var(--color-gold)' : pred.points === 2 ? 'var(--color-green)' : '#DDE4EE';
+        const ptsColor = pred.points === 5 ? 'var(--color-primary)' : pred.points === 2 ? '#fff' : 'var(--color-text-3)';
+
+        let matchInfoHtml = '';
+        if (match) {
+          const homeFlag = `<img src="${flag(match.homeTeam)}" alt="${match.homeTeam}" style="width:26px;height:17px;object-fit:cover;border-radius:2px;" onerror="this.src='https://flagcdn.com/w40/un.png'">`;
+          const awayFlag = `<img src="${flag(match.awayTeam)}" alt="${match.awayTeam}" style="width:26px;height:17px;object-fit:cover;border-radius:2px;" onerror="this.src='https://flagcdn.com/w40/un.png'">`;
+          const resultLine = (match.homeScore != null && match.awayScore != null)
+            ? `<span style="font-size:0.75rem;color:var(--color-text-3);">Resultado: <strong style="color:var(--color-text-2);">${match.homeScore} — ${match.awayScore}</strong></span>`
+            : '';
+          matchInfoHtml = `
+<div style="display:flex;align-items:center;gap:0.6rem;flex-wrap:wrap;">
+  <div style="display:flex;align-items:center;gap:0.35rem;">${homeFlag}<span style="font-weight:600;font-size:0.9rem;color:var(--color-text);">${match.homeTeam}</span></div>
+  <span style="font-family:var(--font-display);font-weight:900;font-size:1.5rem;color:var(--color-primary);">${pred.homeGoals} — ${pred.awayGoals}</span>
+  <div style="display:flex;align-items:center;gap:0.35rem;"><span style="font-weight:600;font-size:0.9rem;color:var(--color-text);">${match.awayTeam}</span>${awayFlag}</div>
+</div>
+<div style="display:flex;align-items:center;gap:0.75rem;margin-top:0.35rem;flex-wrap:wrap;">
+  <span style="font-size:0.75rem;color:var(--color-text-3);">${fmtDate(match.utcDateTime)} · ${match.venue}</span>
+  ${resultLine}
+</div>`;
+        } else {
+          matchInfoHtml = `
+<div style="font-size:0.85rem;color:var(--color-text-2);">Partido ${pred.matchId}</div>
+<div style="font-family:var(--font-display);font-weight:900;font-size:1.5rem;color:var(--color-primary);">${pred.homeGoals} — ${pred.awayGoals}</div>`;
+        }
+
+        const ptsHtml = pred.status === 'scored'
+          ? `<div style="width:2.75rem;height:2.75rem;border-radius:50%;background:${ptsBg};color:${ptsColor};display:flex;align-items:center;justify-content:center;font-family:var(--font-display);font-weight:900;font-size:1.15rem;flex-shrink:0;">${pred.points ?? 0}</div>`
+          : '';
+
+        div.innerHTML = `
+<div style="padding:1.25rem 1.5rem;display:flex;align-items:flex-start;justify-content:space-between;gap:1rem;flex-wrap:wrap;">
+  <div style="flex:1;">${matchInfoHtml}</div>
+  <div style="display:flex;align-items:center;gap:0.75rem;flex-shrink:0;padding-top:0.15rem;">
+    <span class="badge ${pred.status === 'pending' ? 'badge-gray' : 'badge-green'}">${pred.status === 'pending' ? 'Pendiente' : 'Puntuado'}</span>
+    ${ptsHtml}
+  </div>
+</div>`;
+        list.appendChild(div);
+      });
+    }
+
+    renderPredictions('pending');
+
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        renderPredictions((btn as HTMLElement).dataset.tab as 'pending' | 'scored');
+      });
+    });
+  });
+</script>
