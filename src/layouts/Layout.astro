@@ -1,5 +1,15 @@
 ---
 // src/layouts/Layout.astro
+import '@fontsource/inter/400.css';
+import '@fontsource/inter/500.css';
+import '@fontsource/inter/600.css';
+import '@fontsource/inter/700.css';
+import '@fontsource/barlow-condensed/400.css';
+import '@fontsource/barlow-condensed/600.css';
+import '@fontsource/barlow-condensed/700.css';
+import '@fontsource/barlow-condensed/800.css';
+import '@fontsource/barlow-condensed/900.css';
+
 export interface Props {
   title?: string;
   description?: string;
@@ -20,8 +30,6 @@ const {
   <meta name="description" content={description} />
   <title>{title} | Polla Mundial 2026</title>
   <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 </head>
 <body>
   <!-- Navbar -->
