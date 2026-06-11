@@ -32,17 +32,35 @@ const groupLetters = ['A','B','C','D','E','F','G','H','I','J','K','L'];
 
         <div id="admin-status" style="display:none;margin-bottom:1.5rem;padding:0.85rem 1.25rem;border-radius:var(--radius-sm);font-size:0.88rem;font-weight:600;"></div>
 
-        <div class="tabs" id="admin-tabs" style="flex-wrap:wrap;margin-bottom:1.5rem;">
-          {groupLetters.map((l, i) => (
-            <button class={`tab-btn${i === 0 ? ' active' : ''}`} data-group={l}>Grupo {l}</button>
-          ))}
+        <div class="tabs" id="admin-mode-tabs" style="margin-bottom:1.75rem;border-bottom:1px solid var(--color-border);padding-bottom:1rem;">
+          <button class="tab-btn active" data-mode="scores">Actualizar marcadores</button>
+          <button class="tab-btn" data-mode="predictions">Predicciones por día</button>
         </div>
 
-        <div id="admin-matches-loading" style="text-align:center;padding:3rem 0;">
-          <div class="spinner" style="margin:0 auto;"></div>
+        <div id="view-scores">
+          <div class="tabs" id="admin-tabs" style="flex-wrap:wrap;margin-bottom:1.5rem;">
+            {groupLetters.map((l, i) => (
+              <button class={`tab-btn${i === 0 ? ' active' : ''}`} data-group={l}>Grupo {l}</button>
+            ))}
+          </div>
+
+          <div id="admin-matches-loading" style="text-align:center;padding:3rem 0;">
+            <div class="spinner" style="margin:0 auto;"></div>
+          </div>
+
+          <div id="admin-matches" style="display:none;"></div>
         </div>
 
-        <div id="admin-matches" style="display:none;"></div>
+        <div id="view-predictions" style="display:none;">
+          <div style="display:flex;align-items:flex-end;gap:0.75rem;flex-wrap:wrap;margin-bottom:1.75rem;">
+            <div style="display:flex;flex-direction:column;gap:0.35rem;">
+              <label for="pred-date" class="section-label" style="margin:0;">Fecha del partido</label>
+              <input type="date" id="pred-date" class="input" style="max-width:200px;">
+            </div>
+            <button class="btn btn-primary btn-sm" id="pred-load">Ver predicciones</button>
+          </div>
+          <div id="pred-results"></div>
+        </div>
 
       </div>
     </div>
@@ -51,7 +69,7 @@ const groupLetters = ['A','B','C','D','E','F','G','H','I','J','K','L'];
 
 <script>
   import { auth, onAuthStateChanged, db, collection, query, orderBy, getDocs } from '../lib/firebase';
-  import { updateMatchScore, recalculateGroupStandings, scorePredictionsForMatch } from '../lib/db';
+  import { updateMatchScore, recalculateGroupStandings, scorePredictionsForMatch, getAllPredictionsForMatch, getAllUsers } from '../lib/db';
 
   const ADMIN_EMAILS = [import.meta.env.PUBLIC_ADMIN_EMAIL].filter(Boolean);
 
@@ -270,6 +288,143 @@ const groupLetters = ['A','B','C','D','E','F','G','H','I','J','K','L'];
     btn.textContent = `Recalcular tabla Grupo ${group}`;
   }
 
+  // ── Predicciones por día ──────────────────────────────
+  let usersMap: Record<string, any> = {};
+  let predsLoaded = false;
+
+  const localDate = (utc: string) => {
+    try { return new Date(utc).toLocaleDateString('en-CA', { timeZone: 'America/Bogota' }); }
+    catch { return ''; }
+  };
+
+  async function loadPredictionsByDate(dateStr: string) {
+    const resultsEl = document.getElementById('pred-results') as HTMLElement;
+    if (!dateStr) {
+      resultsEl.innerHTML = '<p style="color:var(--color-text-3);">Selecciona una fecha.</p>';
+      return;
+    }
+    resultsEl.innerHTML = '<div class="spinner" style="margin:2.5rem auto;"></div>';
+
+    const dayMatches = allMatches
+      .filter((m: any) => localDate(m.utcDateTime) === dateStr)
+      .sort((a: any, b: any) => a.utcDateTime.localeCompare(b.utcDateTime));
+
+    if (dayMatches.length === 0) {
+      resultsEl.innerHTML = '<p style="text-align:center;color:var(--color-text-3);padding:2.5rem 0;">No hay partidos programados para esta fecha.</p>';
+      return;
+    }
+
+    try {
+      if (Object.keys(usersMap).length === 0) {
+        const users = await getAllUsers();
+        users.forEach((u: any) => { usersMap[u.uid] = u; });
+      }
+      const predsPerMatch = await Promise.all(dayMatches.map((m: any) => getAllPredictionsForMatch(m.id)));
+      renderPredictions(dayMatches, predsPerMatch);
+    } catch (e: any) {
+      console.error(e);
+      const isPermDenied = e?.code === 'permission-denied';
+      resultsEl.innerHTML = `<p style="color:var(--color-accent);padding:1.5rem 0;text-align:center;">${
+        isPermDenied
+          ? 'Sin permisos para leer predicciones. Ejecuta: firebase deploy --only firestore:rules'
+          : `Error cargando predicciones: ${e?.message ?? 'desconocido'}`
+      }</p>`;
+    }
+  }
+
+  function renderPredictions(matches: any[], predsPerMatch: any[][]) {
+    const resultsEl = document.getElementById('pred-results') as HTMLElement;
+    const totalPreds = predsPerMatch.reduce((s, arr) => s + arr.length, 0);
+
+    resultsEl.innerHTML = `
+      <div style="margin-bottom:1rem;color:var(--color-text-3);font-size:0.85rem;">
+        ${matches.length} partido${matches.length === 1 ? '' : 's'} · ${totalPreds} predicción${totalPreds === 1 ? '' : 'es'} en total
+      </div>
+      <div style="display:flex;flex-direction:column;gap:1rem;">
+      ${matches.map((m: any, i: number) => {
+        const preds = [...predsPerMatch[i]].sort((a: any, b: any) => {
+          const an = (usersMap[a.userId]?.displayName || a.userId).toLowerCase();
+          const bn = (usersMap[b.userId]?.displayName || b.userId).toLowerCase();
+          return an.localeCompare(bn);
+        });
+        const finished = m.status === 'finished';
+        const resultStr = finished ? `${m.homeScore} - ${m.awayScore}` : 'vs';
+        return `
+        <div class="card" style="padding:1rem 1.25rem;">
+          <div style="font-size:0.75rem;color:var(--color-text-3);margin-bottom:0.85rem;">
+            P${m.matchNumber} · Grupo ${m.group} · ${fmtDate(m.utcDateTime)}
+          </div>
+          <div style="display:flex;align-items:center;justify-content:center;gap:0.6rem;margin-bottom:1rem;font-family:var(--font-display);font-weight:700;font-size:0.95rem;">
+            <img src="${flag(m.homeTeam)}" style="width:24px;height:16px;object-fit:cover;border-radius:2px;" onerror="this.src='https://flagcdn.com/w40/un.png'">
+            <span>${m.homeTeam}</span>
+            <span style="color:var(--color-primary);font-size:1.1rem;">${resultStr}</span>
+            <span>${m.awayTeam}</span>
+            <img src="${flag(m.awayTeam)}" style="width:24px;height:16px;object-fit:cover;border-radius:2px;" onerror="this.src='https://flagcdn.com/w40/un.png'">
+          </div>
+          ${preds.length === 0
+            ? '<p style="text-align:center;color:var(--color-text-3);font-size:0.85rem;padding:0.5rem 0;">Sin predicciones para este partido.</p>'
+            : `<div style="display:flex;flex-direction:column;gap:0.4rem;">
+                ${preds.map((p: any) => {
+                  const name = usersMap[p.userId]?.displayName || p.userId;
+                  const photo = usersMap[p.userId]?.photoURL;
+                  let badge = '';
+                  if (p.status === 'scored') {
+                    const pts = p.points ?? 0;
+                    const bg = pts === 5 ? 'var(--color-gold)' : pts === 2 ? 'var(--color-green)' : 'var(--color-surface-2)';
+                    const fg = pts === 5 ? '#1A2B52' : pts === 2 ? '#fff' : 'var(--color-text-3)';
+                    const bd = pts === 0 ? 'border:1px solid var(--color-border);' : '';
+                    badge = `<span style="background:${bg};color:${fg};${bd}padding:0.1rem 0.55rem;border-radius:999px;font-size:0.72rem;font-weight:700;">${pts} pts</span>`;
+                  } else {
+                    badge = '<span style="color:var(--color-text-3);font-size:0.72rem;font-weight:600;">pendiente</span>';
+                  }
+                  return `
+                  <div style="display:flex;align-items:center;gap:0.6rem;padding:0.5rem 0.65rem;background:var(--color-surface-2);border-radius:var(--radius-sm);">
+                    ${photo ? `<img src="${photo}" style="width:24px;height:24px;border-radius:50%;object-fit:cover;" referrerpolicy="no-referrer">` : ''}
+                    <span style="font-weight:600;font-size:0.88rem;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${name}</span>
+                    <span style="font-family:var(--font-display);font-weight:700;font-size:1rem;">${p.homeGoals} - ${p.awayGoals}</span>
+                    ${badge}
+                  </div>`;
+                }).join('')}
+              </div>`
+          }
+        </div>`;
+      }).join('')}
+      </div>
+    `;
+  }
+
+  function setupModeTabs() {
+    document.querySelectorAll('#admin-mode-tabs .tab-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('#admin-mode-tabs .tab-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        const mode = (btn as HTMLElement).dataset.mode;
+        if (mode === 'predictions') {
+          hide('view-scores');
+          show('view-predictions');
+          if (!predsLoaded) {
+            predsLoaded = true;
+            loadPredictionsByDate((document.getElementById('pred-date') as HTMLInputElement).value);
+          }
+        } else {
+          hide('view-predictions');
+          show('view-scores');
+        }
+      });
+    });
+
+    const dateInput = document.getElementById('pred-date') as HTMLInputElement;
+    dateInput.value = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Bogota' });
+    document.getElementById('pred-load')?.addEventListener('click', () => {
+      predsLoaded = true;
+      loadPredictionsByDate(dateInput.value);
+    });
+    dateInput.addEventListener('change', () => {
+      predsLoaded = true;
+      loadPredictionsByDate(dateInput.value);
+    });
+  }
+
   function setupTabs() {
     document.querySelectorAll('#admin-tabs .tab-btn').forEach(btn => {
       btn.addEventListener('click', () => {
@@ -288,6 +443,7 @@ const groupLetters = ['A','B','C','D','E','F','G','H','I','J','K','L'];
       return;
     }
     show('admin-content');
+    setupModeTabs();
     setupTabs();
     await loadMatches();
   });
