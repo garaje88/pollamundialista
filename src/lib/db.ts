@@ -94,6 +94,11 @@ export async function updateUserProfile(uid: string, data: Partial<UserProfile>)
   await updateDoc(ref, { ...data });
 }
 
+export async function getAllUsers(): Promise<UserProfile[]> {
+  const snap = await getDocs(collection(db, 'users'));
+  return snap.docs.map(d => d.data() as UserProfile);
+}
+
 // ──────────────────────────────────────────────
 // Predictions
 // ──────────────────────────────────────────────
