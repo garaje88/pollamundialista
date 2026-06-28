@@ -10,7 +10,8 @@
     "build": "astro build && node scripts/patch-cloudflare-wrangler.js",
     "preview": "astro preview",
     "astro": "astro",
-    "seed": "tsx scripts/seed-matches.ts"
+    "seed": "tsx scripts/seed-matches.ts",
+    "update-r32": "tsx scripts/update-r32.ts"
   },
   "dependencies": {
     "@astrojs/react": "^5.0.6",

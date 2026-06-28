@@ -7,7 +7,7 @@ import Layout from '../layouts/Layout.astro';
     <div class="container">
       <div class="section-label">Fixture completo</div>
       <h1>Partidos del Mundial 2026</h1>
-      <p>Predice el marcador de cada partido antes de que comience. Las predicciones se cierran al pitido inicial.</p>
+      <p>Predice el marcador de cada partido antes de que comience. Las predicciones se cierran 1 hora antes del pitido inicial.</p>
     </div>
   </div>
 
@@ -19,22 +19,37 @@ import Layout from '../layouts/Layout.astro';
         <a href="/login" style="color:var(--color-primary);font-weight:700;margin-left:0.5rem;">Iniciar sesión con Google →</a>
       </div>
 
-      <div class="tabs" id="group-tabs" style="flex-wrap:wrap;margin-bottom:1.5rem;">
-        <button class="tab-btn active" data-group="all">Todos</button>
-        <button class="tab-btn" data-group="A">Grupo A</button>
-        <button class="tab-btn" data-group="B">Grupo B</button>
-        <button class="tab-btn" data-group="C">Grupo C</button>
-        <button class="tab-btn" data-group="D">Grupo D</button>
-        <button class="tab-btn" data-group="E">Grupo E</button>
-        <button class="tab-btn" data-group="F">Grupo F</button>
-        <button class="tab-btn" data-group="G">Grupo G</button>
-        <button class="tab-btn" data-group="H">Grupo H</button>
-        <button class="tab-btn" data-group="I">Grupo I</button>
-        <button class="tab-btn" data-group="J">Grupo J</button>
-        <button class="tab-btn" data-group="K">Grupo K</button>
-        <button class="tab-btn" data-group="L">Grupo L</button>
+      <div class="phase-selector">
+        <label for="phase-select">Fase</label>
+        <select id="phase-select">
+          <optgroup label="Eliminatorias">
+            <option value="Dieciseisavos" selected>Dieciseisavos de final</option>
+            <option value="Octavos">Octavos de final</option>
+            <option value="Cuartos">Cuartos de final</option>
+            <option value="Semifinal">Semifinales</option>
+            <option value="Tercer puesto">Tercer puesto</option>
+            <option value="Final">Final</option>
+          </optgroup>
+          <optgroup label="Fase de grupos">
+            <option value="grupos">Todos los grupos</option>
+            <option value="A">Grupo A</option>
+            <option value="B">Grupo B</option>
+            <option value="C">Grupo C</option>
+            <option value="D">Grupo D</option>
+            <option value="E">Grupo E</option>
+            <option value="F">Grupo F</option>
+            <option value="G">Grupo G</option>
+            <option value="H">Grupo H</option>
+            <option value="I">Grupo I</option>
+            <option value="J">Grupo J</option>
+            <option value="K">Grupo K</option>
+            <option value="L">Grupo L</option>
+          </optgroup>
+        </select>
       </div>
       <p style="font-size:0.75rem;color:var(--color-text-3);margin-bottom:1rem;">Horarios en hora de Bogotá (UTC-5)</p>
+
+      <div id="phase-note" style="display:none;margin-bottom:1.25rem;padding:0.85rem 1.1rem;background:var(--color-surface-2);border-radius:var(--radius-md);font-size:0.82rem;color:var(--color-text-2);"></div>
 
       <div id="loading-matches" style="text-align:center;padding:4rem 0;">
         <div class="spinner" style="margin:0 auto;"></div>
@@ -66,24 +81,8 @@ import Layout from '../layouts/Layout.astro';
 <script>
   import { db, collection, query, orderBy, getDocs } from '../lib/firebase';
   import { auth, onAuthStateChanged } from '../lib/firebase';
-  import { savePrediction, getUserPredictions } from '../lib/db';
-
-  const FLAG: Record<string, string> = {
-    'Mexico':'mx','South Africa':'za','South Korea':'kr','Czech Republic':'cz',
-    'Canada':'ca','Bosnia and Herzegovina':'ba','Qatar':'qa','Switzerland':'ch',
-    'Brazil':'br','Morocco':'ma','Haiti':'ht','Scotland':'gb-sct',
-    'United States':'us','Paraguay':'py','Australia':'au','Turkey':'tr',
-    'Germany':'de','Curacao':'cw','Ivory Coast':'ci','Ecuador':'ec',
-    'Netherlands':'nl','Japan':'jp','Sweden':'se','Tunisia':'tn',
-    'Belgium':'be','Egypt':'eg','Iran':'ir','New Zealand':'nz',
-    'Spain':'es','Cape Verde':'cv','Saudi Arabia':'sa','Uruguay':'uy',
-    'France':'fr','Senegal':'sn','Iraq':'iq','Norway':'no',
-    'Argentina':'ar','Algeria':'dz','Austria':'at','Jordan':'jo',
-    'Portugal':'pt','DR Congo':'cd','Uzbekistan':'uz','Colombia':'co',
-    'England':'gb-eng','Croatia':'hr','Ghana':'gh','Panama':'pa',
-  };
-
-  const flag = (t: string) => `https://flagcdn.com/w80/${FLAG[t] ?? t.slice(0,2).toLowerCase()}.png`;
+  import { savePrediction, getUserPredictions, getAllGroupStandings } from '../lib/db';
+  import { resolveBracket, flagUrl, isPlaceholder, prettyCode } from '../lib/knockout';
 
   const fmtDate = (utc: string) => {
     try {
@@ -95,9 +94,17 @@ import Layout from '../layouts/Layout.astro';
   };
 
   let allMatches: any[] = [];
+  let resolved: Map<string, { home: string; away: string }> = new Map();
   let user: any = null;
   let preds: Map<string, any> = new Map();
-  let group = 'all';
+  let phase = 'Dieciseisavos';
+
+  // Devuelve los partidos que corresponden a la fase seleccionada.
+  function matchesForPhase(): any[] {
+    if (phase === 'grupos') return allMatches.filter(m => m.round.startsWith('Grupo'));
+    if (/^[A-L]$/.test(phase)) return allMatches.filter(m => m.group === phase);
+    return allMatches.filter(m => m.round === phase);
+  }
 
   async function init() {
     onAuthStateChanged(auth, async u => {
@@ -116,6 +123,17 @@ import Layout from '../layouts/Layout.astro';
     try {
       const snap = await getDocs(query(collection(db, 'matches'), orderBy('utcDateTime', 'asc')));
       allMatches = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+
+      // Resolver los equipos clasificados de la fase eliminatoria a partir de las
+      // tablas de posiciones y los resultados ya cargados.
+      try {
+        const gs = await getAllGroupStandings();
+        const standings: Record<string, any[]> = {};
+        Object.values(gs).forEach((g: any) => { if (g?.group) standings[g.group] = g.teams ?? []; });
+        resolved = resolveBracket(allMatches as any, standings);
+      } catch {
+        resolved = resolveBracket(allMatches as any, {});
+      }
     } catch (e: any) {
       console.error(e);
       (document.getElementById('loading-matches') as HTMLElement).style.display = 'none';
@@ -136,17 +154,36 @@ import Layout from '../layouts/Layout.astro';
       return;
     }
     render();
-    setupTabs();
+    setupSelector();
+  }
+
+  function teamName(code: string): string {
+    return isPlaceholder(code) ? prettyCode(code) : code;
   }
 
   function render() {
     const box = document.getElementById('matches-container') as HTMLElement;
+    const note = document.getElementById('phase-note') as HTMLElement;
     box.style.display = 'flex';
     box.innerHTML = '';
 
-    const list = group === 'all' ? allMatches : allMatches.filter(m => m.group === group);
+    const list = matchesForPhase();
+
+    // Aviso cuando aún no se conocen los rivales de una ronda eliminatoria.
+    const isKnockout = !/^[A-L]$/.test(phase) && phase !== 'grupos';
+    const pending = list.filter(m => {
+      const r = resolved.get(m.id) || { home: m.homeTeam, away: m.awayTeam };
+      return isPlaceholder(r.home) || isPlaceholder(r.away);
+    }).length;
+    if (isKnockout && pending > 0) {
+      note.style.display = 'block';
+      note.innerHTML = `🔎 Algunos rivales de esta fase aún se están definiendo. Los equipos se actualizan automáticamente al cerrarse la fase anterior. Puedes registrar igualmente tu predicción de marcador.`;
+    } else {
+      note.style.display = 'none';
+    }
+
     if (!list.length) {
-      box.innerHTML = '<p style="text-align:center;padding:2rem;color:var(--color-text-3);">No hay partidos.</p>';
+      box.innerHTML = '<p style="text-align:center;padding:2rem;color:var(--color-text-3);">No hay partidos en esta fase.</p>';
       return;
     }
 
@@ -161,6 +198,10 @@ import Layout from '../layouts/Layout.astro';
       ms.forEach(m => {
         const p = preds.get(m.id);
         const scored = m.homeScore !== null && m.awayScore !== null;
+
+        const r = resolved.get(m.id) || { home: m.homeTeam, away: m.awayTeam };
+        const homeReal = r.home, awayReal = r.away;
+        const homeLabel = teamName(homeReal), awayLabel = teamName(awayReal);
 
         // Cierre de predicciones: 1 hora antes del pitazo
         const msToKickoff = new Date(m.utcDateTime).getTime() - Date.now();
@@ -202,8 +243,8 @@ import Layout from '../layouts/Layout.astro';
         el.innerHTML = `
 <div class="match-card">
   <div class="match-team">
-    <img src="${flag(m.homeTeam)}" alt="${m.homeTeam}" class="match-flag" onerror="this.src='https://flagcdn.com/w80/un.png'">
-    <span class="match-team-name">${m.homeTeam}</span>
+    <img src="${flagUrl(homeReal)}" alt="${homeLabel}" class="match-flag" onerror="this.src='https://flagcdn.com/w80/un.png'">
+    <span class="match-team-name">${homeLabel}</span>
   </div>
   <div class="match-center">
     ${scored ? `<div class="match-score">${m.homeScore} - ${m.awayScore}</div>` : `<div style="font-family:var(--font-display);font-weight:700;font-size:1.1rem;color:var(--color-text-3);">VS</div>`}
@@ -211,8 +252,8 @@ import Layout from '../layouts/Layout.astro';
     <div class="match-venue">📍 ${m.venue}, ${m.city}</div>
   </div>
   <div class="match-team">
-    <img src="${flag(m.awayTeam)}" alt="${m.awayTeam}" class="match-flag" onerror="this.src='https://flagcdn.com/w80/un.png'">
-    <span class="match-team-name">${m.awayTeam}</span>
+    <img src="${flagUrl(awayReal)}" alt="${awayLabel}" class="match-flag" onerror="this.src='https://flagcdn.com/w80/un.png'">
+    <span class="match-team-name">${awayLabel}</span>
   </div>
 </div>
 ${predRowHtml}`;
@@ -244,16 +285,51 @@ ${predRowHtml}`;
     }
   }
 
-  function setupTabs() {
-    document.querySelectorAll('#group-tabs .tab-btn').forEach(b => {
-      b.addEventListener('click', () => {
-        document.querySelectorAll('#group-tabs .tab-btn').forEach(x => x.classList.remove('active'));
-        b.classList.add('active');
-        group = (b as HTMLElement).dataset.group ?? 'all';
-        render();
-      });
+  function setupSelector() {
+    const sel = document.getElementById('phase-select') as HTMLSelectElement;
+    sel.value = phase;
+    sel.addEventListener('change', () => {
+      phase = sel.value;
+      render();
     });
   }
 
   init();
 </script>
+
+<style>
+  .phase-selector {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 0.75rem;
+    flex-wrap: wrap;
+  }
+  .phase-selector label {
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 0.7rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--color-text-3);
+  }
+  #phase-select {
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 1rem;
+    color: var(--color-text);
+    background: var(--color-surface);
+    border: 1.5px solid var(--color-border);
+    border-radius: var(--radius-md);
+    padding: 0.6rem 2.5rem 0.6rem 1rem;
+    cursor: pointer;
+    min-width: 260px;
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath fill='%230a2472' d='M1 1l5 5 5-5'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 1rem center;
+    transition: border-color 0.15s;
+  }
+  #phase-select:hover { border-color: var(--color-primary); }
+  #phase-select:focus { outline: none; border-color: var(--color-primary); box-shadow: 0 0 0 3px rgba(10,36,114,0.12); }
+</style>
