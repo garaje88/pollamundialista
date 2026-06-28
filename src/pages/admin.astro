@@ -2,6 +2,14 @@
 import Layout from '../layouts/Layout.astro';
 
 const groupLetters = ['A','B','C','D','E','F','G','H','I','J','K','L'];
+const knockoutPhases = [
+  { code: 'R32', label: 'Dieciseisavos' },
+  { code: 'R16', label: 'Octavos' },
+  { code: 'QF',  label: 'Cuartos' },
+  { code: 'SF',  label: 'Semis' },
+  { code: '3P',  label: '3.er puesto' },
+  { code: 'F',   label: 'Final' },
+];
 ---
 
 <Layout title="Admin" activePage="">
@@ -38,9 +46,16 @@ const groupLetters = ['A','B','C','D','E','F','G','H','I','J','K','L'];
         </div>
 
         <div id="view-scores">
+          <div style="font-size:0.7rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--color-text-3);margin-bottom:0.5rem;">Eliminatorias</div>
+          <div class="tabs" id="admin-tabs-knockout" style="flex-wrap:wrap;margin-bottom:1.25rem;">
+            {knockoutPhases.map((p, i) => (
+              <button class={`tab-btn${i === 0 ? ' active' : ''}`} data-group={p.code}>{p.label}</button>
+            ))}
+          </div>
+          <div style="font-size:0.7rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--color-text-3);margin-bottom:0.5rem;">Fase de grupos</div>
           <div class="tabs" id="admin-tabs" style="flex-wrap:wrap;margin-bottom:1.5rem;">
-            {groupLetters.map((l, i) => (
-              <button class={`tab-btn${i === 0 ? ' active' : ''}`} data-group={l}>Grupo {l}</button>
+            {groupLetters.map((l) => (
+              <button class="tab-btn" data-group={l}>Grupo {l}</button>
             ))}
           </div>
 
@@ -69,7 +84,8 @@ const groupLetters = ['A','B','C','D','E','F','G','H','I','J','K','L'];
 
 <script>
   import { auth, onAuthStateChanged, db, collection, query, orderBy, getDocs } from '../lib/firebase';
-  import { updateMatchScore, recalculateGroupStandings, scorePredictionsForMatch, getAllPredictionsForMatch, getAllUsers } from '../lib/db';
+  import { updateMatchScore, recalculateGroupStandings, scorePredictionsForMatch, getAllPredictionsForMatch, getAllUsers, getAllGroupStandings } from '../lib/db';
+  import { resolveBracket, isPlaceholder, prettyCode } from '../lib/knockout';
 
   const ADMIN_EMAILS = [import.meta.env.PUBLIC_ADMIN_EMAIL].filter(Boolean);
 
@@ -115,7 +131,28 @@ const groupLetters = ['A','B','C','D','E','F','G','H','I','J','K','L'];
   };
 
   let allMatches: any[] = [];
-  let currentGroup = 'A';
+  let resolved: Map<string, { home: string; away: string }> = new Map();
+  let currentGroup = 'R32';
+
+  const isGroupLetter = (g: string) => /^[A-L]$/.test(g);
+
+  // Equipo resuelto para un partido/lado; si sigue siendo placeholder devuelve etiqueta legible.
+  function teamOf(m: any, side: 'home' | 'away'): { name: string; flagName: string } {
+    const r = resolved.get(m.id);
+    const real = r ? (side === 'home' ? r.home : r.away) : (side === 'home' ? m.homeTeam : m.awayTeam);
+    return isPlaceholder(real) ? { name: prettyCode(real), flagName: '' } : { name: real, flagName: real };
+  }
+
+  async function rebuildBracket() {
+    try {
+      const gs = await getAllGroupStandings();
+      const standings: Record<string, any[]> = {};
+      Object.values(gs).forEach((g: any) => { if (g?.group) standings[g.group] = g.teams ?? []; });
+      resolved = resolveBracket(allMatches as any, standings);
+    } catch {
+      resolved = resolveBracket(allMatches as any, {});
+    }
+  }
 
   function show(id: string) { (document.getElementById(id) as HTMLElement).style.display = ''; }
   function hide(id: string) { (document.getElementById(id) as HTMLElement).style.display = 'none'; }
@@ -134,6 +171,7 @@ const groupLetters = ['A','B','C','D','E','F','G','H','I','J','K','L'];
     try {
       const snap = await getDocs(query(collection(db, 'matches'), orderBy('utcDateTime', 'asc')));
       allMatches = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      await rebuildBracket();
       hide('admin-matches-loading');
       show('admin-matches');
       renderGroup(currentGroup);
@@ -146,6 +184,7 @@ const groupLetters = ['A','B','C','D','E','F','G','H','I','J','K','L'];
   function renderGroup(group: string) {
     const matches = allMatches.filter((m: any) => m.group === group);
     const container = document.getElementById('admin-matches') as HTMLElement;
+    const isGroup = isGroupLetter(group);
 
     container.innerHTML = `
       <div style="display:flex;flex-direction:column;gap:0.75rem;">
@@ -157,16 +196,17 @@ const groupLetters = ['A','B','C','D','E','F','G','H','I','J','K','L'];
             : live
             ? '<span style="background:var(--color-gold);color:#1A2B52;padding:0.15rem 0.6rem;border-radius:4px;font-size:0.72rem;font-weight:700;">En vivo</span>'
             : '<span style="background:var(--color-surface-2);color:var(--color-text-3);padding:0.15rem 0.6rem;border-radius:4px;font-size:0.72rem;font-weight:600;border:1px solid var(--color-border);">Programado</span>';
+          const h = teamOf(m, 'home'), a = teamOf(m, 'away');
           return `
           <div class="card" style="padding:1rem 1.25rem;">
             <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.75rem;">
-              <span style="font-size:0.75rem;color:var(--color-text-3);">P${m.matchNumber} · ${fmtDate(m.utcDateTime)} · ${m.venue}</span>
+              <span style="font-size:0.75rem;color:var(--color-text-3);">P${m.matchNumber} · ${m.round} · ${fmtDate(m.utcDateTime)} · ${m.venue}</span>
               <span style="margin-left:auto;">${statusBadge}</span>
             </div>
             <div style="display:grid;grid-template-columns:1fr auto 1fr;gap:1rem;align-items:center;">
               <div style="display:flex;align-items:center;gap:0.6rem;">
-                <img src="${flag(m.homeTeam)}" style="width:28px;height:18px;object-fit:cover;border-radius:2px;" onerror="this.src='https://flagcdn.com/w40/un.png'">
-                <span style="font-weight:600;font-size:0.9rem;">${m.homeTeam}</span>
+                <img src="${flag(h.flagName)}" style="width:28px;height:18px;object-fit:cover;border-radius:2px;" onerror="this.src='https://flagcdn.com/w40/un.png'">
+                <span style="font-weight:600;font-size:0.9rem;">${h.name}</span>
               </div>
               <div style="display:flex;align-items:center;gap:0.5rem;">
                 <input type="number" min="0" max="30" step="1" class="input-score" id="h-${m.id}"
@@ -178,8 +218,8 @@ const groupLetters = ['A','B','C','D','E','F','G','H','I','J','K','L'];
                   style="width:3rem;text-align:center;padding:0.4rem 0.3rem;">
               </div>
               <div style="display:flex;align-items:center;gap:0.6rem;justify-content:flex-end;">
-                <span style="font-weight:600;font-size:0.9rem;">${m.awayTeam}</span>
-                <img src="${flag(m.awayTeam)}" style="width:28px;height:18px;object-fit:cover;border-radius:2px;" onerror="this.src='https://flagcdn.com/w40/un.png'">
+                <span style="font-weight:600;font-size:0.9rem;">${a.name}</span>
+                <img src="${flag(a.flagName)}" style="width:28px;height:18px;object-fit:cover;border-radius:2px;" onerror="this.src='https://flagcdn.com/w40/un.png'">
               </div>
             </div>
             <div style="margin-top:0.85rem;display:flex;justify-content:flex-end;gap:0.5rem;">
@@ -189,18 +229,19 @@ const groupLetters = ['A','B','C','D','E','F','G','H','I','J','K','L'];
             </div>
           </div>`;
         }).join('')}
+        ${isGroup ? `
         <div style="margin-top:0.5rem;padding-top:1rem;border-top:1px solid var(--color-border);display:flex;justify-content:flex-end;">
           <button class="btn btn-outline btn-sm" id="recalc-${group}" data-group="${group}">
             Recalcular tabla Grupo ${group}
           </button>
-        </div>
+        </div>` : ''}
       </div>
     `;
 
     matches.forEach((m: any) => {
       document.getElementById(`save-${m.id}`)?.addEventListener('click', () => saveScore(m.id, m.group));
     });
-    document.getElementById(`recalc-${group}`)?.addEventListener('click', () => recalcGroup(group));
+    if (isGroup) document.getElementById(`recalc-${group}`)?.addEventListener('click', () => recalcGroup(group));
   }
 
   async function saveScore(matchId: string, group: string) {
@@ -235,16 +276,24 @@ const groupLetters = ['A','B','C','D','E','F','G','H','I','J','K','L'];
     allMatches = allMatches.map((m: any) =>
       m.id === matchId ? { ...m, homeScore: hVal, awayScore: aVal, status: 'finished' } : m
     );
-    renderGroup(group);
+    const isGroup = isGroupLetter(group);
 
-    // ── Paso 2a: recalcular tabla (best-effort) ─────────────
-    let standingsOk = false;
-    try {
-      await recalculateGroupStandings(group, WC_GROUPS[group]);
-      standingsOk = true;
-    } catch (e: any) {
-      console.error('Error recalculando tabla:', e?.code, e?.message);
+    // ── Paso 2a: recalcular tabla (solo fase de grupos, best-effort) ──
+    let standingsMsg = '';
+    if (isGroup) {
+      try {
+        await recalculateGroupStandings(group, WC_GROUPS[group]);
+        standingsMsg = `Tabla Grupo ${group} actualizada.`;
+      } catch (e: any) {
+        console.error('Error recalculando tabla:', e?.code, e?.message);
+        standingsMsg = '⚠ Tabla no actualizada.';
+      }
     }
+
+    // Re-resolver el cuadro: con el nuevo resultado pueden definirse rivales de
+    // rondas posteriores (o el clasificado de un grupo).
+    await rebuildBracket();
+    renderGroup(group);
 
     // ── Paso 2b: puntuar predicciones (best-effort) ──────────
     let scoringMsg = '';
@@ -258,10 +307,7 @@ const groupLetters = ['A','B','C','D','E','F','G','H','I','J','K','L'];
         : `⚠ Error al puntuar: ${e?.message ?? 'desconocido'}`;
     }
 
-    showStatus(
-      `Resultado guardado. ${standingsOk ? `Tabla Grupo ${group} actualizada.` : '⚠ Tabla no actualizada.'} ${scoringMsg}`,
-      true
-    );
+    showStatus(`Resultado guardado. ${standingsMsg} ${scoringMsg}`.trim(), true);
 
     btn.disabled = false;
     btn.textContent = 'Actualizar';
@@ -349,17 +395,18 @@ const groupLetters = ['A','B','C','D','E','F','G','H','I','J','K','L'];
         });
         const finished = m.status === 'finished';
         const resultStr = finished ? `${m.homeScore} - ${m.awayScore}` : 'vs';
+        const h = teamOf(m, 'home'), a = teamOf(m, 'away');
         return `
         <div class="card" style="padding:1rem 1.25rem;">
           <div style="font-size:0.75rem;color:var(--color-text-3);margin-bottom:0.85rem;">
-            P${m.matchNumber} · Grupo ${m.group} · ${fmtDate(m.utcDateTime)}
+            P${m.matchNumber} · ${m.round} · ${fmtDate(m.utcDateTime)}
           </div>
           <div style="display:flex;align-items:center;justify-content:center;gap:0.6rem;margin-bottom:1rem;font-family:var(--font-display);font-weight:700;font-size:0.95rem;">
-            <img src="${flag(m.homeTeam)}" style="width:24px;height:16px;object-fit:cover;border-radius:2px;" onerror="this.src='https://flagcdn.com/w40/un.png'">
-            <span>${m.homeTeam}</span>
+            <img src="${flag(h.flagName)}" style="width:24px;height:16px;object-fit:cover;border-radius:2px;" onerror="this.src='https://flagcdn.com/w40/un.png'">
+            <span>${h.name}</span>
             <span style="color:var(--color-primary);font-size:1.1rem;">${resultStr}</span>
-            <span>${m.awayTeam}</span>
-            <img src="${flag(m.awayTeam)}" style="width:24px;height:16px;object-fit:cover;border-radius:2px;" onerror="this.src='https://flagcdn.com/w40/un.png'">
+            <span>${a.name}</span>
+            <img src="${flag(a.flagName)}" style="width:24px;height:16px;object-fit:cover;border-radius:2px;" onerror="this.src='https://flagcdn.com/w40/un.png'">
           </div>
           ${preds.length === 0
             ? '<p style="text-align:center;color:var(--color-text-3);font-size:0.85rem;padding:0.5rem 0;">Sin predicciones para este partido.</p>'
@@ -426,11 +473,12 @@ const groupLetters = ['A','B','C','D','E','F','G','H','I','J','K','L'];
   }
 
   function setupTabs() {
-    document.querySelectorAll('#admin-tabs .tab-btn').forEach(btn => {
+    const allTabs = document.querySelectorAll('#admin-tabs .tab-btn, #admin-tabs-knockout .tab-btn');
+    allTabs.forEach(btn => {
       btn.addEventListener('click', () => {
-        document.querySelectorAll('#admin-tabs .tab-btn').forEach(b => b.classList.remove('active'));
+        allTabs.forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
-        currentGroup = (btn as HTMLElement).dataset.group ?? 'A';
+        currentGroup = (btn as HTMLElement).dataset.group ?? 'R32';
         renderGroup(currentGroup);
       });
     });

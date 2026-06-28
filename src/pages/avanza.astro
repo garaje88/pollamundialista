@@ -1,72 +1,5 @@
 ---
 import Layout from '../layouts/Layout.astro';
-
-interface BracketMatch {
-  id: string;
-  label: string;
-  date: string;
-  time: string;
-  home: string;
-  away: string;
-}
-
-function utcToLocal(utcStr: string): { date: string; time: string } {
-  const d = new Date(utcStr);
-  const date = d.toLocaleDateString('es-CO', { timeZone: 'America/Bogota', day: 'numeric', month: 'short' });
-  const time = d.toLocaleTimeString('es-CO', { timeZone: 'America/Bogota', hour: '2-digit', minute: '2-digit' });
-  return { date, time };
-}
-
-const r32L: BracketMatch[] = [
-  { id:'M73',  label:'P73',  ...(() => { const {date,time}=utcToLocal('2026-06-28T19:00:00Z'); return {date,time}; })(), home:'2A',     away:'2B'      },
-  { id:'M74',  label:'P74',  ...(() => { const {date,time}=utcToLocal('2026-06-29T20:30:00Z'); return {date,time}; })(), home:'1E',     away:'3ABCDF'  },
-  { id:'M75',  label:'P75',  ...(() => { const {date,time}=utcToLocal('2026-06-30T01:00:00Z'); return {date,time}; })(), home:'1F',     away:'2C'      },
-  { id:'M76',  label:'P76',  ...(() => { const {date,time}=utcToLocal('2026-06-30T21:00:00Z'); return {date,time}; })(), home:'1G',     away:'3ABHIJ'  },
-  { id:'M77',  label:'P77',  ...(() => { const {date,time}=utcToLocal('2026-07-01T00:00:00Z'); return {date,time}; })(), home:'1I',     away:'3CDFGH'  },
-  { id:'M78',  label:'P78',  ...(() => { const {date,time}=utcToLocal('2026-07-01T19:00:00Z'); return {date,time}; })(), home:'1J',     away:'3EFGKL'  },
-  { id:'M79',  label:'P79',  ...(() => { const {date,time}=utcToLocal('2026-07-02T01:00:00Z'); return {date,time}; })(), home:'2G',     away:'2H'      },
-  { id:'M80',  label:'P80',  ...(() => { const {date,time}=utcToLocal('2026-07-02T23:00:00Z'); return {date,time}; })(), home:'2I',     away:'2J'      },
-];
-
-const r32R: BracketMatch[] = [
-  { id:'M81',  label:'P81',  ...(() => { const {date,time}=utcToLocal('2026-06-28T23:00:00Z'); return {date,time}; })(), home:'1A',     away:'3BDEKL'  },
-  { id:'M82',  label:'P82',  ...(() => { const {date,time}=utcToLocal('2026-06-29T01:00:00Z'); return {date,time}; })(), home:'2D',     away:'2E'      },
-  { id:'M83',  label:'P83',  ...(() => { const {date,time}=utcToLocal('2026-06-29T23:00:00Z'); return {date,time}; })(), home:'2K',     away:'2L'      },
-  { id:'M84',  label:'P84',  ...(() => { const {date,time}=utcToLocal('2026-06-30T02:00:00Z'); return {date,time}; })(), home:'1B',     away:'3ACDIJ'  },
-  { id:'M85',  label:'P85',  ...(() => { const {date,time}=utcToLocal('2026-07-01T20:00:00Z'); return {date,time}; })(), home:'1H',     away:'3CDFL'   },
-  { id:'M86',  label:'P86',  ...(() => { const {date,time}=utcToLocal('2026-07-02T00:00:00Z'); return {date,time}; })(), home:'2F',     away:'1D'      },
-  { id:'M87',  label:'P87',  ...(() => { const {date,time}=utcToLocal('2026-07-03T00:00:00Z'); return {date,time}; })(), home:'1C',     away:'3AEGHK'  },
-  { id:'M88',  label:'P88',  ...(() => { const {date,time}=utcToLocal('2026-07-03T23:00:00Z'); return {date,time}; })(), home:'2E',     away:'1L'      },
-];
-
-const r16L: BracketMatch[] = [
-  { id:'M89', label:'P89', ...(() => { const {date,time}=utcToLocal('2026-07-04T21:00:00Z'); return {date,time}; })(), home:'W-P74', away:'W-P77' },
-  { id:'M90', label:'P90', ...(() => { const {date,time}=utcToLocal('2026-07-04T17:00:00Z'); return {date,time}; })(), home:'W-P73', away:'W-P75' },
-  { id:'M91', label:'P91', ...(() => { const {date,time}=utcToLocal('2026-07-05T21:00:00Z'); return {date,time}; })(), home:'W-P76', away:'W-P79' },
-  { id:'M92', label:'P92', ...(() => { const {date,time}=utcToLocal('2026-07-06T00:00:00Z'); return {date,time}; })(), home:'W-P78', away:'W-P80' },
-];
-
-const r16R: BracketMatch[] = [
-  { id:'M93', label:'P93', ...(() => { const {date,time}=utcToLocal('2026-07-05T17:00:00Z'); return {date,time}; })(), home:'W-P81', away:'W-P84' },
-  { id:'M94', label:'P94', ...(() => { const {date,time}=utcToLocal('2026-07-05T23:00:00Z'); return {date,time}; })(), home:'W-P82', away:'W-P83' },
-  { id:'M95', label:'P95', ...(() => { const {date,time}=utcToLocal('2026-07-06T21:00:00Z'); return {date,time}; })(), home:'W-P85', away:'W-P88' },
-  { id:'M96', label:'P96', ...(() => { const {date,time}=utcToLocal('2026-07-07T17:00:00Z'); return {date,time}; })(), home:'W-P86', away:'W-P87' },
-];
-
-const qfL: BracketMatch[] = [
-  { id:'M97', label:'P97', ...(() => { const {date,time}=utcToLocal('2026-07-09T20:00:00Z'); return {date,time}; })(), home:'W-P89', away:'W-P90' },
-  { id:'M98', label:'P98', ...(() => { const {date,time}=utcToLocal('2026-07-10T00:00:00Z'); return {date,time}; })(), home:'W-P91', away:'W-P92' },
-];
-
-const qfR: BracketMatch[] = [
-  { id:'M99',  label:'P99',  ...(() => { const {date,time}=utcToLocal('2026-07-10T20:00:00Z'); return {date,time}; })(), home:'W-P93', away:'W-P94' },
-  { id:'M100', label:'P100', ...(() => { const {date,time}=utcToLocal('2026-07-11T17:00:00Z'); return {date,time}; })(), home:'W-P95', away:'W-P96' },
-];
-
-const sfL: BracketMatch = { id:'M101', label:'P101', ...(() => { const {date,time}=utcToLocal('2026-07-14T19:00:00Z'); return {date,time}; })(), home:'W-P97', away:'W-P98' };
-const sfR: BracketMatch = { id:'M102', label:'P102', ...(() => { const {date,time}=utcToLocal('2026-07-15T19:00:00Z'); return {date,time}; })(), home:'W-P99', away:'W-P100' };
-const third: BracketMatch = { id:'M103', label:'3er Puesto', ...(() => { const {date,time}=utcToLocal('2026-07-18T19:00:00Z'); return {date,time}; })(), home:'L-P101', away:'L-P102' };
-const final_: BracketMatch = { id:'M104', label:'P104', ...(() => { const {date,time}=utcToLocal('2026-07-19T19:00:00Z'); return {date,time}; })(), home:'W-P101', away:'W-P102' };
 ---
 
 <Layout title="Bracket Eliminatorias" activePage="avanza">
@@ -79,79 +12,54 @@ const final_: BracketMatch = { id:'M104', label:'P104', ...(() => { const {date,
   </div>
 
   <section style="padding:2rem 0 3rem;">
-    <div style="overflow-x:auto;padding:0 1rem 1rem;">
+    <div class="container">
+      <div id="bracket-loading" style="text-align:center;padding:4rem 0;">
+        <div class="spinner" style="margin:0 auto;"></div>
+        <p style="margin-top:1rem;color:var(--color-text-3);">Cargando bracket...</p>
+      </div>
+      <div id="bracket-error" style="display:none;text-align:center;padding:4rem 0;">
+        <div style="font-size:3rem;margin-bottom:1rem;">⚠️</div>
+        <h3>No se pudo cargar el bracket</h3>
+        <p id="bracket-error-msg" style="margin:0.75rem 0 0.5rem;color:var(--color-text-3);"></p>
+        <button onclick="window.location.reload()" class="btn btn-primary" style="margin-top:1rem;">Reintentar</button>
+      </div>
+    </div>
+
+    <div id="bracket-scroll" style="display:none;overflow-x:auto;padding:0 1rem 1rem;">
       <div class="bracket">
 
         <!-- R32 Left -->
         <div class="round">
           <div class="round-header">Dieciseisavos</div>
-          <div class="round-matches">
-            {r32L.map(m => (
-              <div class="match-slot">
-                <div class="match-meta">{m.label} · {m.date} {m.time}</div>
-                <div class="team-slot"><span class="team-check"></span><span class="team-name">{m.home}</span></div>
-                <div class="team-slot"><span class="team-check"></span><span class="team-name">{m.away}</span></div>
-              </div>
-            ))}
-          </div>
+          <div class="round-matches" id="col-r32L"></div>
         </div>
 
         <!-- R16 Left -->
         <div class="round connector-left">
           <div class="round-header">Octavos</div>
-          <div class="round-matches r16">
-            {r16L.map(m => (
-              <div class="match-slot">
-                <div class="match-meta">{m.label} · {m.date} {m.time}</div>
-                <div class="team-slot"><span class="team-check"></span><span class="team-name">{m.home}</span></div>
-                <div class="team-slot"><span class="team-check"></span><span class="team-name">{m.away}</span></div>
-              </div>
-            ))}
-          </div>
+          <div class="round-matches r16" id="col-r16L"></div>
         </div>
 
         <!-- QF Left -->
         <div class="round connector-left">
           <div class="round-header">Cuartos</div>
-          <div class="round-matches qf">
-            {qfL.map(m => (
-              <div class="match-slot">
-                <div class="match-meta">{m.label} · {m.date} {m.time}</div>
-                <div class="team-slot"><span class="team-check"></span><span class="team-name">{m.home}</span></div>
-                <div class="team-slot"><span class="team-check"></span><span class="team-name">{m.away}</span></div>
-              </div>
-            ))}
-          </div>
+          <div class="round-matches qf" id="col-qfL"></div>
         </div>
 
         <!-- SF Left -->
         <div class="round connector-left">
           <div class="round-header">Semifinal</div>
-          <div class="round-matches sf">
-            <div class="match-slot">
-              <div class="match-meta">{sfL.label} · {sfL.date} {sfL.time}</div>
-              <div class="team-slot"><span class="team-check"></span><span class="team-name">{sfL.home}</span></div>
-              <div class="team-slot"><span class="team-check"></span><span class="team-name">{sfL.away}</span></div>
-            </div>
-          </div>
+          <div class="round-matches sf" id="col-sfL"></div>
         </div>
 
         <!-- FINAL CENTER -->
         <div class="round final-col">
           <div class="round-header" style="color:var(--color-gold);font-size:1rem;">FINAL</div>
           <div class="round-matches final-matches">
-            <div class="match-slot final-slot">
-              <div class="match-meta" style="color:var(--color-gold);">MetLife Stadium · {final_.date} {final_.time}</div>
-              <div class="team-slot final-team"><span class="team-check"></span><span class="team-name">{final_.home}</span></div>
-              <div class="team-slot final-team"><span class="team-check"></span><span class="team-name">{final_.away}</span></div>
-            </div>
+            <div id="col-final"></div>
             <div style="margin-top:1.5rem;">
               <div style="font-size:0.7rem;text-transform:uppercase;letter-spacing:0.08em;color:var(--color-text-3);font-weight:700;text-align:center;margin-bottom:0.5rem;">3er Puesto</div>
-              <div class="match-slot" style="border-color:var(--color-border);">
-                <div class="match-meta">{third.date} {third.time}</div>
-                <div class="team-slot"><span class="team-check"></span><span class="team-name">{third.home}</span></div>
-                <div class="team-slot"><span class="team-check"></span><span class="team-name">{third.away}</span></div>
-              </div>
+              <div id="col-third"></div>
             </div>
           </div>
         </div>
@@ -159,55 +67,25 @@ const final_: BracketMatch = { id:'M104', label:'P104', ...(() => { const {date,
         <!-- SF Right -->
         <div class="round connector-right">
           <div class="round-header">Semifinal</div>
-          <div class="round-matches sf">
-            <div class="match-slot">
-              <div class="match-meta">{sfR.label} · {sfR.date} {sfR.time}</div>
-              <div class="team-slot"><span class="team-check"></span><span class="team-name">{sfR.home}</span></div>
-              <div class="team-slot"><span class="team-check"></span><span class="team-name">{sfR.away}</span></div>
-            </div>
-          </div>
+          <div class="round-matches sf" id="col-sfR"></div>
         </div>
 
         <!-- QF Right -->
         <div class="round connector-right">
           <div class="round-header">Cuartos</div>
-          <div class="round-matches qf">
-            {qfR.map(m => (
-              <div class="match-slot">
-                <div class="match-meta">{m.label} · {m.date} {m.time}</div>
-                <div class="team-slot"><span class="team-check"></span><span class="team-name">{m.home}</span></div>
-                <div class="team-slot"><span class="team-check"></span><span class="team-name">{m.away}</span></div>
-              </div>
-            ))}
-          </div>
+          <div class="round-matches qf" id="col-qfR"></div>
         </div>
 
         <!-- R16 Right -->
         <div class="round connector-right">
           <div class="round-header">Octavos</div>
-          <div class="round-matches r16">
-            {r16R.map(m => (
-              <div class="match-slot">
-                <div class="match-meta">{m.label} · {m.date} {m.time}</div>
-                <div class="team-slot"><span class="team-check"></span><span class="team-name">{m.home}</span></div>
-                <div class="team-slot"><span class="team-check"></span><span class="team-name">{m.away}</span></div>
-              </div>
-            ))}
-          </div>
+          <div class="round-matches r16" id="col-r16R"></div>
         </div>
 
         <!-- R32 Right -->
         <div class="round">
           <div class="round-header">Dieciseisavos</div>
-          <div class="round-matches">
-            {r32R.map(m => (
-              <div class="match-slot">
-                <div class="match-meta">{m.label} · {m.date} {m.time}</div>
-                <div class="team-slot"><span class="team-check"></span><span class="team-name">{m.home}</span></div>
-                <div class="team-slot"><span class="team-check"></span><span class="team-name">{m.away}</span></div>
-              </div>
-            ))}
-          </div>
+          <div class="round-matches" id="col-r32R"></div>
         </div>
 
       </div>
@@ -215,7 +93,103 @@ const final_: BracketMatch = { id:'M104', label:'P104', ...(() => { const {date,
   </section>
 </Layout>
 
-<style>
+<script>
+  import { db, collection, query, orderBy, getDocs } from '../lib/firebase';
+  import { getAllGroupStandings } from '../lib/db';
+  import { resolveBracket, flagUrl, isPlaceholder, prettyCode } from '../lib/knockout';
+
+  // Qué partidos van en cada columna del cuadro (ids del seed).
+  const COLUMNS: Record<string, string[]> = {
+    'col-r32L':  ['m073','m074','m075','m076','m077','m078','m079','m080'],
+    'col-r32R':  ['m081','m082','m083','m084','m085','m086','m087','m088'],
+    'col-r16L':  ['m089','m090','m091','m092'],
+    'col-r16R':  ['m093','m094','m095','m096'],
+    'col-qfL':   ['m097','m098'],
+    'col-qfR':   ['m099','m100'],
+    'col-sfL':   ['m101'],
+    'col-sfR':   ['m102'],
+    'col-final': ['m104'],
+    'col-third': ['m103'],
+  };
+
+  const fmt = (utc: string) => {
+    try {
+      return new Date(utc).toLocaleDateString('es-CO', {
+        day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit',
+        timeZone: 'America/Bogota',
+      });
+    } catch { return utc; }
+  };
+
+  function teamRow(code: string, score: number | null, win: boolean): string {
+    const ph = isPlaceholder(code);
+    const name = ph ? prettyCode(code) : code;
+    const flag = ph
+      ? `<span class="team-flag is-ph"></span>`
+      : `<img class="team-flag" src="${flagUrl(code)}" alt="${name}" onerror="this.src='https://flagcdn.com/w40/un.png'">`;
+    const sc = score != null ? `<span class="team-score">${score}</span>` : '';
+    return `<div class="team-slot${win ? ' winner' : ''}${ph ? ' placeholder' : ''}">${flag}<span class="team-name">${name}</span>${sc}</div>`;
+  }
+
+  function slotInner(m: any, resolved: Map<string, { home: string; away: string }>): string {
+    const r = resolved.get(m.id) || { home: m.homeTeam, away: m.awayTeam };
+    const finished = m.homeScore != null && m.awayScore != null;
+    const homeWin = finished && m.homeScore > m.awayScore;
+    const awayWin = finished && m.awayScore > m.homeScore;
+    const label = m.id === 'm103' ? '3er Puesto' : `P${m.matchNumber}`;
+    return `
+      <div class="match-meta">${label} · ${fmt(m.utcDateTime)}</div>
+      ${teamRow(r.home, finished ? m.homeScore : null, homeWin)}
+      ${teamRow(r.away, finished ? m.awayScore : null, awayWin)}
+    `;
+  }
+
+  async function init() {
+    let matches: any[] = [];
+    let resolved: Map<string, { home: string; away: string }>;
+    try {
+      const snap = await getDocs(query(collection(db, 'matches'), orderBy('utcDateTime', 'asc')));
+      matches = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      try {
+        const gs = await getAllGroupStandings();
+        const standings: Record<string, any[]> = {};
+        Object.values(gs).forEach((g: any) => { if (g?.group) standings[g.group] = g.teams ?? []; });
+        resolved = resolveBracket(matches as any, standings);
+      } catch {
+        resolved = resolveBracket(matches as any, {});
+      }
+    } catch (e: any) {
+      console.error(e);
+      (document.getElementById('bracket-loading') as HTMLElement).style.display = 'none';
+      const err = document.getElementById('bracket-error') as HTMLElement;
+      (document.getElementById('bracket-error-msg') as HTMLElement).textContent =
+        e?.message ?? 'Error al conectar con la base de datos.';
+      err.style.display = 'block';
+      return;
+    }
+
+    const byId = new Map(matches.map(m => [m.id, m]));
+    Object.entries(COLUMNS).forEach(([colId, ids]) => {
+      const col = document.getElementById(colId);
+      if (!col) return;
+      col.innerHTML = ids.map(id => {
+        const m = byId.get(id);
+        if (!m) return '';
+        const isFinal = id === 'm104';
+        return `<div class="match-slot${isFinal ? ' final-slot' : ''}" data-match="${id}">${slotInner(m, resolved)}</div>`;
+      }).join('');
+    });
+
+    (document.getElementById('bracket-loading') as HTMLElement).style.display = 'none';
+    (document.getElementById('bracket-scroll') as HTMLElement).style.display = 'block';
+  }
+
+  init();
+</script>
+
+<!-- Estilos globales (namespaceados bajo .bracket) porque los slots se inyectan
+     vía innerHTML y no reciben el atributo de scope de Astro. -->
+<style is:global>
   .bracket {
     display: flex;
     align-items: center;
@@ -224,7 +198,7 @@ const final_: BracketMatch = { id:'M104', label:'P104', ...(() => { const {date,
     padding: 1rem 0;
   }
 
-  .round {
+  .bracket .round {
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -232,12 +206,12 @@ const final_: BracketMatch = { id:'M104', label:'P104', ...(() => { const {date,
     min-width: 160px;
   }
 
-  .final-col {
+  .bracket .final-col {
     min-width: 185px;
     flex: 1.2;
   }
 
-  .round-header {
+  .bracket .round-header {
     font-family: var(--font-display);
     font-weight: 700;
     font-size: 0.75rem;
@@ -251,7 +225,7 @@ const final_: BracketMatch = { id:'M104', label:'P104', ...(() => { const {date,
     width: 100%;
   }
 
-  .round-matches {
+  .bracket .round-matches {
     display: flex;
     flex-direction: column;
     gap: 0.5rem;
@@ -261,30 +235,31 @@ const final_: BracketMatch = { id:'M104', label:'P104', ...(() => { const {date,
     min-height: 520px;
   }
 
-  .round-matches.r16 { min-height: 520px; gap: 1rem; }
-  .round-matches.qf  { min-height: 520px; gap: 3rem; }
-  .round-matches.sf  { min-height: 520px; justify-content: center; }
-  .round-matches.final-matches { min-height: 520px; justify-content: center; gap: 1.5rem; }
+  .bracket .round-matches.r16 { min-height: 520px; gap: 1rem; }
+  .bracket .round-matches.qf  { min-height: 520px; gap: 3rem; }
+  .bracket .round-matches.sf  { min-height: 520px; justify-content: center; }
+  .bracket .round-matches.final-matches { min-height: 520px; justify-content: center; gap: 1.5rem; }
 
-  .match-slot {
+  .bracket .match-slot {
     background: var(--color-surface);
     border: 1.5px solid var(--color-border);
     border-radius: 6px;
-    padding: 0.5rem 0.6rem;
-    width: 150px;
+    padding: 0.45rem 0.55rem;
+    width: 158px;
     box-shadow: 0 1px 3px rgba(10,36,114,0.06);
     position: relative;
+    box-sizing: border-box;
   }
 
-  .final-slot {
+  .bracket .final-slot {
     border-color: var(--color-gold);
     border-width: 2px;
     box-shadow: 0 2px 12px rgba(255,197,0,0.2);
-    width: 165px;
+    width: 172px;
   }
 
-  .match-meta {
-    font-size: 0.62rem;
+  .bracket .match-meta {
+    font-size: 0.6rem;
     color: var(--color-text-3);
     font-weight: 500;
     margin-bottom: 0.4rem;
@@ -293,44 +268,70 @@ const final_: BracketMatch = { id:'M104', label:'P104', ...(() => { const {date,
     text-overflow: ellipsis;
   }
 
-  .team-slot {
+  .bracket .team-slot {
     display: flex;
     align-items: center;
-    gap: 0.35rem;
-    padding: 0.25rem 0.3rem;
+    gap: 0.4rem;
+    padding: 0.25rem 0.2rem;
     border-radius: 3px;
   }
 
-  .team-slot:first-of-type {
+  .bracket .team-slot:first-of-type {
     border-bottom: 1px solid var(--color-border);
-    margin-bottom: 0.2rem;
+    margin-bottom: 0.15rem;
   }
 
-  .final-team {
-    padding: 0.35rem 0.3rem;
+  .bracket .team-slot.winner .team-name { color: var(--color-green, #1a7a4a); }
+  .bracket .team-slot.winner .team-score { color: var(--color-green, #1a7a4a); }
+
+  .bracket .team-slot.placeholder .team-name {
+    color: var(--color-text-3);
+    font-style: italic;
+    font-weight: 600;
+    font-size: 0.7rem;
   }
 
-  .team-check {
-    display: inline-block;
-    width: 10px;
-    height: 10px;
-    border: 1.5px solid var(--color-border);
+  .bracket .team-flag {
+    width: 20px;
+    height: 14px;
+    object-fit: cover;
     border-radius: 2px;
     flex-shrink: 0;
+    box-shadow: 0 0 0 1px rgba(0,0,0,0.08);
   }
 
-  .team-name {
+  .bracket .team-flag.is-ph {
+    display: inline-block;
+    background: var(--color-surface-2);
+    border: 1px dashed var(--color-border);
+    box-shadow: none;
+  }
+
+  .bracket .team-name {
     font-family: var(--font-display);
     font-weight: 700;
-    font-size: 0.78rem;
+    font-size: 0.76rem;
+    line-height: 1.15;
     color: var(--color-text);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+    flex: 1;
+    min-width: 0;
+  }
+
+  .bracket .team-score {
+    font-family: var(--font-display);
+    font-weight: 800;
+    font-size: 0.9rem;
+    color: var(--color-text);
+    flex-shrink: 0;
+    min-width: 1ch;
+    text-align: right;
   }
 
   /* Connector lines using pseudo-elements */
-  .connector-left .match-slot::before {
+  .bracket .connector-left .match-slot::before {
     content: '';
     position: absolute;
     left: -20px;
@@ -340,7 +341,7 @@ const final_: BracketMatch = { id:'M104', label:'P104', ...(() => { const {date,
     background: var(--color-border);
   }
 
-  .connector-right .match-slot::after {
+  .bracket .connector-right .match-slot::after {
     content: '';
     position: absolute;
     right: -20px;
